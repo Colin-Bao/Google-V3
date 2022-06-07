@@ -1,6 +1,6 @@
 import time
 from datetime import datetime, date
-
+from PIL import Image
 import matplotlib as mpl
 import os
 import mysql.connector
@@ -223,29 +223,6 @@ def load_and_predict(h_path):
     df_con.to_csv('result_img.csv')
 
 
-def test_batch_predict(h_path):
-    from keras.applications.imagenet_utils import decode_predictions
-    import glob
-
-    file_path = 'twitter2/test'
-    f_names = glob.glob(file_path + '*.jpg')
-    img = []
-    # 把图片读取出来放到列表中
-    for i in range(len(f_names)):
-        images = image.load_img(f_names[i], target_size=(299, 299))
-        x = image.img_to_array(images)
-        x = np.expand_dims(x, axis=0)
-        img.append(x)
-        print('loading no.%s image' % i)
-    print(img)
-    # 把图片数组联合在一起
-    x = np.concatenate([x for x in img])
-
-    model = load_model(h_path)
-    y = model.predict(x)
-    print('Predicted:', decode_predictions(y, top=3))
-
-
 # 重新遍历预测结果,得到的结果是对的
 # 传入的图片路径是一个可迭代的对象
 def load_and_predict_img(h_path, img_path):
@@ -298,69 +275,75 @@ def load_and_predict_img(h_path, img_path):
     # df_res.to_csv('img_predict.csv')
 
 
+# 用于可视化的类
+def plot_images(images, cls_true, cls_pred=None, cls_pred2=None, smooth=True, root_dir=''):
+    class_names = [0, 1]
+    assert len(images) == len(cls_true)
+
+    # Create figure with sub-plots.
+    fig, axes = plt.subplots(5, 6)
+
+    # Adjust vertical spacing.
+    if cls_pred is None:
+        hspace = 0.3
+    else:
+        hspace = 0.6
+    fig.subplots_adjust(hspace=hspace, wspace=0.3)
+
+    # Interpolation type.
+    if smooth:
+        interpolation = 'spline16'
+    else:
+        interpolation = 'nearest'
+
+    for i, ax in enumerate(axes.flat):
+        # There may be less than 9 images, ensure it doesn't crash.
+        if i < len(images):
+            # Plot image.
+            # print(root_dir + images[i])
+            # temp_path = '/Users/mac/PycharmProjects/Investor-Sentiment/cover_imgs/MjM5NzQ5MTkyMA==/a65f47f09010b5db1d5b513982c3410e.png'
+            # img = Image.open(temp_path)
+            # plt.imshow(plt.imread(temp_path))
+            # plt.show()
+            ax.imshow(Image.open(root_dir + images[i]),
+                      interpolation=interpolation)
+
+            # Name of the true class.
+            # cls_true_name = class_names[cls_true[i]]
+
+            # Show true and predicted classes.
+            if cls_pred is None:
+                # xlabel = "True: {0}".format('')
+                pass
+            else:
+                # Name of the predicted class.
+                # print(cls_pred[i])
+                neg = cls_pred[i]
+                pos = cls_pred2[i]
+
+                # pre_0
+                label_str = "Pos:{0:.2f} \n Neg:{1:.2f}".format(pos, neg)
+
+                xlabel = label_str
+
+            # Show the classes as the label on the x-axis.
+            font_my = {'family': 'Times New Roman',
+                       'weight': 'normal', 'size': 8,
+                       }
+            ax.set_xlabel(xlabel, font_my)
+
+        # Remove ticks from the plot.
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    # Ensure the plot is shown correctly with multiple plots
+    # in a single Notebook cell.
+    # plt.savefig('sinc.png', dpi=300)
+    plt.show()
+
+
 # 在预测结果中按照行X列展示指定行的结果
 def show_result(columns, img_path='result_img.csv'):
-    def plot_images(images, cls_true, cls_pred=None, cls_pred2=None, smooth=True):
-
-        class_names = [0, 1]
-        assert len(images) == len(cls_true)
-
-        # Create figure with sub-plots.
-        fig, axes = plt.subplots(4, 4)
-
-        # Adjust vertical spacing.
-        if cls_pred is None:
-            hspace = 0.3
-        else:
-            hspace = 0.6
-        fig.subplots_adjust(hspace=hspace, wspace=0.3)
-
-        # Interpolation type.
-        if smooth:
-            interpolation = 'spline16'
-        else:
-            interpolation = 'nearest'
-
-        for i, ax in enumerate(axes.flat):
-            # There may be less than 9 images, ensure it doesn't crash.
-            if i < len(images):
-                # Plot image.
-
-                ax.imshow(plt.imread(images[i]),
-                          interpolation=interpolation)
-
-                # Name of the true class.
-                # cls_true_name = class_names[cls_true[i]]
-
-                # Show true and predicted classes.
-                if cls_pred is None:
-                    # xlabel = "True: {0}".format('')
-                    pass
-                else:
-                    # Name of the predicted class.
-                    neg = cls_pred[i]
-                    pos = cls_pred2[i]
-
-                    # pre_0
-                    label_str = "Pos:{0:.2f} \n Neg:{1:.2f}".format(pos, neg)
-
-                    xlabel = label_str
-
-                # Show the classes as the label on the x-axis.
-                font_my = {'family': 'Times New Roman',
-                           'weight': 'normal', 'size': 8,
-                           }
-                ax.set_xlabel(xlabel, font_my)
-
-            # Remove ticks from the plot.
-            ax.set_xticks([])
-            ax.set_yticks([])
-
-        # Ensure the plot is shown correctly with multiple plots
-        # in a single Notebook cell.
-        # plt.savefig('sinc.png', dpi=300)
-        plt.show()
-
     df_pre = pd.read_csv(img_path)
 
     df_pre = df_pre.iloc[columns]
@@ -439,14 +422,22 @@ def predict_img(h_path, img_path):
     # print(neg, pos)
 
 
-# 用于在数据库中的路径进行情绪预测
-def load_imgpath_from_db():
-    # date类型转ts
-    def date_to_ts(date_type):
-        dt = datetime.combine(date_type, datetime.min.time())
-        # datetime.fromtimestamp(p_date)
-        return int(dt.timestamp())
+# date类型转ts
+def date_to_ts(date_type):
+    dt = datetime.combine(date_type, datetime.min.time())
+    # datetime.fromtimestamp(p_date)
+    return int(dt.timestamp())
 
+
+# 获取数据库连接
+def conn_to_db():
+    return mysql.connector.connect(user='root', password='',
+                                   host='127.0.0.1',
+                                   database='wechat_offacc')
+
+
+# 用于在数据库中的路径进行情绪预测
+def predict_imgsent_from_db():
     # 传入图片路径,返回可以预测的x
     def filepath_to_img(df_img, root_path):
         img = []
@@ -488,12 +479,6 @@ def load_imgpath_from_db():
         # 返回新增了neg pos的新df
         return df_c
 
-    # 建立数据库连接
-    def conn_to_db():
-        return mysql.connector.connect(user='root', password='',
-                                       host='127.0.0.1',
-                                       database='wechat_offacc')
-
     # 创建字段
     def create_attr():
         create_download_flag = (
@@ -522,8 +507,8 @@ def load_imgpath_from_db():
         # 按照id处理并转换为dfx
         print('查询到记录条数:', cursor_query.rowcount)
         if cursor_query.rowcount == 0:
-            exit()
-        # 切片
+            return 0
+            # 切片
         # df_sql = pd.DataFrame(cursor_query)
         # df_sql = df_query[:512, :]
         return cursor_query.rowcount, pd.DataFrame(cursor_query)
@@ -570,11 +555,18 @@ def load_imgpath_from_db():
     # create_attr()
 
     # 按照查询图像路径
+
     # 记录的数量 分片计算,内存不够
+
     i = 512
     while i >= 512:
         # 建立连接
         cnx = conn_to_db()
+
+        # 没有查询结果就退出
+        if select_pic_path([date(2021, 6, 1), date(2022, 6, 1)]) == 0:
+            cnx.close()
+            return
 
         rec_cont, df_query = select_pic_path([date(2021, 6, 1), date(2022, 6, 1)])
 
@@ -590,14 +582,191 @@ def load_imgpath_from_db():
         i = rec_cont
 
 
+# 从数据库中提取情绪分析的结果
+def show_imgsent_from_db():
+    # 条件查询
+    def select_top_sent(filter_date):
+        # 创建游标
+        cursor_neg, cursor_pos = cnx.cursor(buffered=True), cnx.cursor(buffered=True)
+
+        # 分开查询
+        query_neg = ("SELECT local_cover,cover_neg,cover_pos FROM articles "
+                     "WHERE cover_neg IS NOT NULL AND "
+                     "p_date BETWEEN %s AND %s "
+                     "ORDER BY cover_neg DESC "
+                     "LIMIT 512")
+
+        query_pos = ("SELECT local_cover,cover_neg,cover_pos FROM articles "
+                     "WHERE cover_pos IS NOT NULL AND "
+                     "p_date BETWEEN %s AND %s "
+                     "ORDER BY cover_pos DESC "
+                     "LIMIT 512")
+        # date类型转ts
+        p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
+
+        # 执行查询语句
+        cursor_neg.execute(query_neg, (p_start_ts, p_end_ts))
+        cursor_pos.execute(query_pos, (p_start_ts, p_end_ts))
+
+        # 按照id处理并转换为dfx
+        print('查询到记录条数:', cursor_neg.rowcount)
+        # 切片
+        # df_sql = pd.DataFrame(cursor_query)
+        # df_sql = df_query[:512, :]
+        return pd.DataFrame(cursor_neg), pd.DataFrame(cursor_pos)
+
+    # 建立连接
+    cnx = conn_to_db()
+
+    # 按照消极情绪排行查询
+    # 筛选公众号+日期+条数
+    df_neg, df_pos = select_top_sent([date(2021, 6, 1), date(2022, 6, 1)])
+
+    # 断开连接
+    cnx.close()
+
+    # 调用可视化
+    df_neg, df_pos = df_neg.iloc[:30, :], df_pos.iloc[:30, :]
+    # print(df_neg[0])
+    # time.sleep(1111)
+    path, neg, pos = df_neg[0], df_neg[1], df_neg[2],
+    images = path
+    cls_true = path
+    # print()
+
+    plot_images(images, cls_true, cls_pred=neg, cls_pred2=pos,
+                root_dir='/Users/mac/PycharmProjects/Investor-Sentiment/')
+
+    path, neg, pos = df_pos[0], df_pos[1], df_pos[2],
+    images = path
+    cls_true = path
+    plot_images(images, cls_true, cls_pred=neg, cls_pred2=pos,
+                root_dir='/Users/mac/PycharmProjects/Investor-Sentiment/')
+
+
+# 一些用于计算的函数
+def cal_from_db():
+    # 先把数据取出来再计算(聚合公众号)
+    # 条件查询
+    def select_biz(bizname, filter_date):
+        # 创建游标
+        cursor_sent = cnx.cursor(buffered=True)
+
+        # 查询id和用于计算的值
+        query_sent = ("SELECT id,p_date,cover_neg,cover_pos FROM articles "
+                      "WHERE articles.biz = %s AND "
+                      "p_date BETWEEN %s AND %s "
+                      "ORDER BY p_date ASC "
+                      )
+
+        # date类型转ts
+        p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
+
+        # 执行查询语句
+        cursor_sent.execute(query_sent, (bizname, p_start_ts, p_end_ts))
+
+        # 按照id处理并转换为df
+        print('查询到记录条数:', cursor_sent.rowcount)
+
+        # cursor_sent.close()
+
+        return pd.DataFrame(cursor_sent)
+
+    # 计算每个公众号每天的情绪值
+    def cal_sent_by_day(biz_name, prob_thod):
+        """
+        :param biz_name:公众号名称
+        :param prob_thod:积极或消极的阈值
+        :return:
+
+        """
+
+    # 获取k线数据用于分析
+    def get_kline():
+        import tushare_api
+        tu = tushare_api.TuShareGet('20210601', '20220601')
+        df_kline = pd.DataFrame(tu.get_kline('000300.ss'))
+        df_kline['date'] = df_kline[['trade_date', ]].apply(lambda x: datetime.strptime(x['trade_date'], '%Y%m%d'),
+                                                            axis=1)
+        df = df_kline.sort_values(by='date')
+        df = df.loc[['ts_code', 'date', 'pct_chg', 'vol', 'amount']]
+        return df
+
+    # 分析sql传回来的数据
+    def ana_sql_df(df):
+        # 分成了可迭代的对象,每个都是df
+        # for i in df.groupby(1):
+        # print(i)
+
+        # 增加一列用于把ts换成天数(后续可以精确的时间) 前面的中扩繁相当于传入的参数x
+        df['datetime'] = df[[1, ]].apply(lambda x: datetime.fromtimestamp(x[1]), axis=1)
+        df['date'] = df[['datetime', ]].apply(lambda x: datetime.date(x['datetime']), axis=1)
+        df['time'] = df[['datetime', ]].apply(lambda x: datetime.time(x['datetime']), axis=1)
+
+        print(df.head())
+
+        # 聚合操作
+        # df_agg_date = df.groupby('date').agg({0: 'count', })
+
+        # transform操作
+        # df['id_count'] = df.groupby('date')[0].transform('count')
+
+        # 自定义apply函数
+        def count_prob(df_group):
+            df_group['count_neg_prob'] = df[[2, ]].apply(lambda x: 1 if x[2] > 0.7 else 0, axis=1)
+            df_group['count_pos_prob'] = df[[3, ]].apply(lambda x: 1 if x[3] > 0.7 else 0, axis=1)
+            # print(df_group)
+            return df_group
+
+        # 在组中计算概率阈值计数
+        df_g = df.groupby(['date'], as_index=False).apply(lambda x: count_prob(x))
+
+        # 计算完以后分组并聚合计算
+        df_agg = df_g.groupby(['date'], as_index=False).agg(
+            {0: 'count', 2: 'mean', 3: 'mean', 'count_neg_prob': 'sum', 'count_pos_prob': 'sum'})
+
+        # 分组后继续计算
+        # df_agg = pd.DataFrame(df_agg)
+        # print(df_agg.columns)
+        df_agg['img_neg'] = df_agg[[0, 'count_neg_prob']].apply(lambda x: x['count_neg_prob'] / x[0], axis=1)
+        df_agg['img_pos'] = df_agg[[0, 'count_pos_prob']].apply(lambda x: x['count_pos_prob'] / x[0], axis=1)
+
+        # 和沪深300对比分析
+        
+        # 存储
+        pd.DataFrame(df_agg).to_csv('df_agg.csv')
+
+    # 建立连接
+    cnx = conn_to_db()
+
+    # 按照指定公众号查询
+    df_biz = select_biz('MjM5NzQ5MTkyMA==', [date(2021, 6, 1), date(2022, 6, 1)])
+
+    cnx.close()
+
+    # 数据分析
+    ana_sql_df(df_biz)
+
+
 if __name__ == '__main__':
     # init_settings()
     # transfer_learning(1)
     # load_and_predict('twitter_tl_500.h5')
     # test_batch_predict('twitter_tl_500.h5')
-    load_imgpath_from_db()
+
     # load_and_predict_img('twitter_tl_500.h5', pd.read_csv('result_img.csv')['2'])
     # show_result([46, 53, 73, 76, 81, 85, 66, 83, 4, 58, 67, 54, 75, 42, 78, 39])
     # show_result([35, 34, 7, 23, 24, 33, 1, 49, 18, 10, 9, 3, 11, 5, 32, 25])
     # predict_img('twitter_tl_500.h5', 'Test.jpeg')
     # show_cnn_structure()
+
+    # 从数据库中获取图像的路径并且用已经训练好的模型进行情绪分析
+    # predict_imgsent_from_db()
+
+    # 从数据库中提取情绪分析的结果
+    # show_imgsent_from_db()
+
+    # 计算
+    # 不在数据库中计算,而是在外部计算,方便修改函数
+    # 最终的原型成熟了可以用函数计算
+    cal_from_db()
