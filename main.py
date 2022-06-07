@@ -689,7 +689,7 @@ def cal_from_db():
         df_kline['date'] = df_kline[['trade_date', ]].apply(lambda x: datetime.strptime(x['trade_date'], '%Y%m%d'),
                                                             axis=1)
         df = df_kline.sort_values(by='date')
-        df = df.loc[['ts_code', 'date', 'pct_chg', 'vol', 'amount']]
+        df = df.loc[:, ['ts_code', 'date', 'pct_chg', 'vol', 'amount']]
         return df
 
     # 分析sql传回来的数据
@@ -703,7 +703,7 @@ def cal_from_db():
         df['date'] = df[['datetime', ]].apply(lambda x: datetime.date(x['datetime']), axis=1)
         df['time'] = df[['datetime', ]].apply(lambda x: datetime.time(x['datetime']), axis=1)
 
-        print(df.head())
+        # print(df.head())
 
         # 聚合操作
         # df_agg_date = df.groupby('date').agg({0: 'count', })
@@ -727,12 +727,14 @@ def cal_from_db():
 
         # 分组后继续计算
         # df_agg = pd.DataFrame(df_agg)
-        # print(df_agg.columns)
         df_agg['img_neg'] = df_agg[[0, 'count_neg_prob']].apply(lambda x: x['count_neg_prob'] / x[0], axis=1)
         df_agg['img_pos'] = df_agg[[0, 'count_pos_prob']].apply(lambda x: x['count_pos_prob'] / x[0], axis=1)
 
-        # 和沪深300对比分析
-        
+        # 和沪深300对比分析 左外连接
+        df_k = get_kline()
+        df_con = pd.merge(df_agg, df_k, how='left', on=['date'])
+        print(df_con)
+
         # 存储
         pd.DataFrame(df_agg).to_csv('df_agg.csv')
 
@@ -767,6 +769,6 @@ if __name__ == '__main__':
     # show_imgsent_from_db()
 
     # 计算
-    # 不在数据库中计算,而是在外部计算,方便修改函数
-    # 最终的原型成熟了可以用函数计算
+    # 不在数据库中计算,在外部计算,方便修改函数
+    # 原型成熟了可以用函数计算
     cal_from_db()
