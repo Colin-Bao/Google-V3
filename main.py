@@ -16,6 +16,7 @@ from keras import callbacks
 from keras_visualizer import visualizer
 import matplotlib.pyplot as plt
 
+import PIL
 from keras.utils.vis_utils import plot_model
 from tensorflow.keras.optimizers import Adagrad
 from keras import models
@@ -281,14 +282,14 @@ def plot_images(images, cls_true, cls_pred=None, cls_pred2=None, smooth=True, ro
     assert len(images) == len(cls_true)
 
     # Create figure with sub-plots.
-    fig, axes = plt.subplots(5, 6)
+    fig, axes = plt.subplots(10, 5)
 
     # Adjust vertical spacing.
     if cls_pred is None:
         hspace = 0.3
     else:
         hspace = 0.6
-    fig.subplots_adjust(hspace=hspace, wspace=0.3)
+    # fig.subplots_adjust(hspace=hspace, wspace=0.3)
 
     # Interpolation type.
     if smooth:
@@ -330,7 +331,7 @@ def plot_images(images, cls_true, cls_pred=None, cls_pred2=None, smooth=True, ro
             font_my = {'family': 'Times New Roman',
                        'weight': 'normal', 'size': 8,
                        }
-            ax.set_xlabel(xlabel, font_my)
+            # ax.set_xlabel(xlabel, font_my)
 
         # Remove ticks from the plot.
         ax.set_xticks([])
@@ -338,7 +339,7 @@ def plot_images(images, cls_true, cls_pred=None, cls_pred2=None, smooth=True, ro
 
     # Ensure the plot is shown correctly with multiple plots
     # in a single Notebook cell.
-    # plt.savefig('sinc.png', dpi=300)
+    plt.savefig('sinc.png', dpi=300)
     plt.show()
 
 
@@ -443,13 +444,19 @@ def predict_imgsent_from_db():
         img = []
         # ran_img = range(len(df_img))
         for i in range(len(df_img)):
-            images = image.load_img(root_path + df_img[i], target_size=(299, 299))
-            x = image.img_to_array(images)
-            x = np.expand_dims(x, axis=0)
-            x = preprocess_input(x)
-            img.append(x)
-            # print(x)
-            print('loading no.%s image' % i)
+            try:
+                images = image.load_img(root_path + df_img[i], target_size=(299, 299))
+                x = image.img_to_array(images)
+                x = np.expand_dims(x, axis=0)
+                x = preprocess_input(x)
+                img.append(x)
+                # print(x)
+                print('loading no.%s image' % i)
+
+            except (FileNotFoundError, PIL.UnidentifiedImageError) as e:
+                print(e, root_path + df_img[i])
+                continue
+
         # 把图片数组联合在一起
         x = np.concatenate([x for x in img])
         return x
@@ -594,13 +601,13 @@ def show_imgsent_from_db():
                      "WHERE cover_neg IS NOT NULL AND "
                      "p_date BETWEEN %s AND %s "
                      "ORDER BY cover_neg DESC "
-                     "LIMIT 512")
+                     "LIMIT 128")
 
         query_pos = ("SELECT local_cover,cover_neg,cover_pos FROM articles "
                      "WHERE cover_pos IS NOT NULL AND "
                      "p_date BETWEEN %s AND %s "
                      "ORDER BY cover_pos DESC "
-                     "LIMIT 512")
+                     "LIMIT 128")
         # date类型转ts
         p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
 
@@ -626,7 +633,7 @@ def show_imgsent_from_db():
     cnx.close()
 
     # 调用可视化
-    df_neg, df_pos = df_neg.iloc[:30, :], df_pos.iloc[:30, :]
+    df_neg, df_pos = df_neg.iloc[:50, :], df_pos.iloc[:50, :]
     # print(df_neg[0])
     # time.sleep(1111)
     path, neg, pos = df_neg[0], df_neg[1], df_neg[2],
@@ -733,8 +740,7 @@ def cal_from_db():
         # 和沪深300对比分析 左外连接
         df_k = get_kline()
         df_con = pd.merge(df_agg, df_k, how='left', on=['date'])
-        print(df_con)
-
+        df_con.to_csv('央视财经合并.csv')
         # 存储
         pd.DataFrame(df_agg).to_csv('df_agg.csv')
 
@@ -763,12 +769,13 @@ if __name__ == '__main__':
     # show_cnn_structure()
 
     # 从数据库中获取图像的路径并且用已经训练好的模型进行情绪分析
+
     # predict_imgsent_from_db()
 
     # 从数据库中提取情绪分析的结果
-    # show_imgsent_from_db()
+    show_imgsent_from_db()
 
     # 计算
     # 不在数据库中计算,在外部计算,方便修改函数
     # 原型成熟了可以用函数计算
-    cal_from_db()
+    # cal_from_db()

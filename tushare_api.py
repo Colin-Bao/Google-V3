@@ -45,3 +45,6 @@ class TuShareGet:
 
     def get_shibor(self):
         return self.pro.shibor(start_date=self.start_date, end_date=self.end_date)
+
+    def get_index(self, code):
+        return self.pro.index_daily(ts_code=code, start_date=self.start_date, end_date=self.end_date)
