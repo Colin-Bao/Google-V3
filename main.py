@@ -1,7 +1,7 @@
 import time
 from datetime import datetime, date
 from PIL import Image
-import matplotlib as mpl
+
 import os
 import mysql.connector
 import pandas as pd
@@ -339,7 +339,7 @@ def plot_images(images, cls_true, cls_pred=None, cls_pred2=None, smooth=True, ro
 
     # Ensure the plot is shown correctly with multiple plots
     # in a single Notebook cell.
-    plt.savefig('sinc.png', dpi=300)
+    # plt.savefig('sinc.png', dpi=300)
     plt.show()
 
 
@@ -580,6 +580,9 @@ def predict_imgsent_from_db():
         # 根据路径计算情绪 一次计算512条就够了
         df_sentiment = cal_img_sentiment(df_query)
 
+        # 还需要详细的情绪数据,细化的
+        # 包括了封面党的位置,颜色,类型标签等数据库,用localurl作为主键和外键
+
         # 更新情绪数据
         update_sent(df_sentiment)
 
@@ -652,41 +655,35 @@ def show_imgsent_from_db():
 
 
 # 一些用于计算的函数
-def cal_from_db():
+def cal_from_db(biz_name):
     # 先把数据取出来再计算(聚合公众号)
-    # 条件查询
-    def select_biz(bizname, filter_date):
+    # 条件查询 合并其他表,更改的时候填写需要改的字段即可
+    # 这里是从
+    def select_biz_join(filter_bizname, filter_date):
         # 创建游标
         cursor_sent = cnx.cursor(buffered=True)
 
         # 查询id和用于计算的值
-        query_sent = ("SELECT id,p_date,cover_neg,cover_pos FROM articles "
-                      "WHERE articles.biz = %s AND "
-                      "p_date BETWEEN %s AND %s "
-                      "ORDER BY p_date ASC "
-                      )
+        query_sent = (
+            "SELECT articles.id,articles.p_date,articles.mov,articles.cover_neg,articles.cover_pos "
+            "FROM articles INNER JOIN article_imgs on articles.id = article_imgs.id "
+            "WHERE articles.biz = %s AND "
+            "articles.p_date BETWEEN %s AND %s "
+            "ORDER BY articles.p_date ASC "
+        )
 
         # date类型转ts
         p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
 
         # 执行查询语句
-        cursor_sent.execute(query_sent, (bizname, p_start_ts, p_end_ts))
+        cursor_sent.execute(query_sent, (filter_bizname, p_start_ts, p_end_ts))
 
         # 按照id处理并转换为df
         print('查询到记录条数:', cursor_sent.rowcount)
 
         # cursor_sent.close()
 
-        return pd.DataFrame(cursor_sent)
-
-    # 计算每个公众号每天的情绪值
-    def cal_sent_by_day(biz_name, prob_thod):
-        """
-        :param biz_name:公众号名称
-        :param prob_thod:积极或消极的阈值
-        :return:
-
-        """
+        return cursor_sent.rowcount, pd.DataFrame(cursor_sent)
 
     # 获取k线数据用于分析
     def get_kline():
@@ -700,10 +697,10 @@ def cal_from_db():
         return df
 
     # 分析sql传回来的数据
+    # articles.id,articles.p_date,articles.mov,articles.cover_neg,articles.cover_pos "
     def ana_sql_df(df):
         # 分成了可迭代的对象,每个都是df
         # for i in df.groupby(1):
-        # print(i)
 
         # 增加一列用于把ts换成天数(后续可以精确的时间) 前面的中扩繁相当于传入的参数x
         df['datetime'] = df[[1, ]].apply(lambda x: datetime.fromtimestamp(x[1]), axis=1)
@@ -720,8 +717,8 @@ def cal_from_db():
 
         # 自定义apply函数
         def count_prob(df_group):
-            df_group['count_neg_prob'] = df[[2, ]].apply(lambda x: 1 if x[2] > 0.7 else 0, axis=1)
-            df_group['count_pos_prob'] = df[[3, ]].apply(lambda x: 1 if x[3] > 0.7 else 0, axis=1)
+            df_group['count_neg_prob'] = df[[3, ]].apply(lambda x: 1 if x[3] > 0.7 else 0, axis=1)
+            df_group['count_pos_prob'] = df[[4, ]].apply(lambda x: 1 if x[4] > 0.7 else 0, axis=1)
             # print(df_group)
             return df_group
 
@@ -730,30 +727,52 @@ def cal_from_db():
 
         # 计算完以后分组并聚合计算
         df_agg = df_g.groupby(['date'], as_index=False).agg(
-            {0: 'count', 2: 'mean', 3: 'mean', 'count_neg_prob': 'sum', 'count_pos_prob': 'sum'})
+            {0: 'count', 3: 'mean', 4: 'mean', 'count_neg_prob': 'sum', 'count_pos_prob': 'sum'})
 
         # 分组后继续计算
         # df_agg = pd.DataFrame(df_agg)
         df_agg['img_neg'] = df_agg[[0, 'count_neg_prob']].apply(lambda x: x['count_neg_prob'] / x[0], axis=1)
         df_agg['img_pos'] = df_agg[[0, 'count_pos_prob']].apply(lambda x: x['count_pos_prob'] / x[0], axis=1)
 
+        #
         # 和沪深300对比分析 左外连接
-        df_k = get_kline()
-        df_con = pd.merge(df_agg, df_k, how='left', on=['date'])
-        df_con.to_csv('央视财经合并.csv')
+        # df_k = get_kline()
+        # df_con = pd.merge(df_agg, df_k, how='left', on=['date'])
+
+        # 重命名
+        df_agg = pd.DataFrame(df_agg)
+        df_agg = df_agg.rename({0: 'article_count', 3: 'neg_prob_mean', 4: 'pos_prob_mean'}, axis='columns')
+
         # 存储
-        pd.DataFrame(df_agg).to_csv('df_agg.csv')
+        df_agg.to_csv('biz_ana/' + biz_name + '.csv')
 
     # 建立连接
     cnx = conn_to_db()
 
-    # 按照指定公众号查询
-    df_biz = select_biz('MjM5NzQ5MTkyMA==', [date(2021, 6, 1), date(2022, 6, 1)])
+    # 合并其他表
+    # 筛选条件按照指定公众号查询
+    #
+    count_row, df_biz = select_biz_join(biz_name, [date(2021, 6, 1), date(2022, 6, 1)])
 
     cnx.close()
 
-    # 数据分析
-    ana_sql_df(df_biz)
+    if count_row == 0:
+        return
+    else:
+        # 数据分析
+        ana_sql_df(df_biz)
+
+
+# 获取所有的公众号列表
+def select_from_gzhs():
+    # 建立数据库连接
+    cnx = conn_to_db()
+    cursor_query = cnx.cursor(buffered=True)
+    query = "SELECT biz FROM gzhs "
+    cursor_query.execute(query)
+    # 关闭游标和连接
+    cnx.close()
+    return cursor_query
 
 
 if __name__ == '__main__':
@@ -773,9 +792,12 @@ if __name__ == '__main__':
     # predict_imgsent_from_db()
 
     # 从数据库中提取情绪分析的结果
-    show_imgsent_from_db()
+    # show_imgsent_from_db()
 
     # 计算
     # 不在数据库中计算,在外部计算,方便修改函数
     # 原型成熟了可以用函数计算
-    # cal_from_db()
+    gzhs_list = select_from_gzhs()
+    for biz in gzhs_list:
+        print('正在分析:', biz[0])
+        cal_from_db(biz[0])
