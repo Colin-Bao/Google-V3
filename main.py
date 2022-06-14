@@ -655,17 +655,18 @@ def show_imgsent_from_db():
 
 
 # 一些用于计算的函数
-def cal_from_db(biz_name):
+# 用于join article和article_imgs表,并把每个公众号按照日期聚合得到gzh_imgs_bydate表
+def merge_article_img(filter_biz, filter_date):
     # 先把数据取出来再计算(聚合公众号)
     # 条件查询 合并其他表,更改的时候填写需要改的字段即可
     # 这里是从articles表和article_imgs表连接查找数据
-    def select_biz_join(filter_bizname, filter_date):
+    def select_article_img():
         # 创建游标
         cursor_sent = cnx.cursor(buffered=True)
 
         # 查询id和用于计算的值
         query_sent = (
-            "SELECT articles.id,articles.p_date,articles.mov,articles.cover_neg,articles.cover_pos "
+            "SELECT articles.id,articles.p_date,articles.t_date,articles.mov,articles.cover_neg,articles.cover_pos "
             "FROM articles INNER JOIN article_imgs on articles.id = article_imgs.id "
             "WHERE articles.biz = %s AND "
             "articles.p_date BETWEEN %s AND %s "
@@ -676,7 +677,7 @@ def cal_from_db(biz_name):
         p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
 
         # 执行查询语句
-        cursor_sent.execute(query_sent, (filter_bizname, p_start_ts, p_end_ts))
+        cursor_sent.execute(query_sent, (filter_biz, p_start_ts, p_end_ts))
 
         # 按照id处理并转换为df
         print('查询到记录条数:', cursor_sent.rowcount)
@@ -685,109 +686,123 @@ def cal_from_db(biz_name):
 
         return cursor_sent.rowcount, pd.DataFrame(cursor_sent)
 
-    # 获取k线数据用于分析
-
-    # 分析sql传回来的数据
-    # articles.id,articles.p_date,articles.mov,articles.cover_neg,articles.cover_pos "
     # 分析的是article和text表合并的数据
+    # 主要是聚合的运算 概率阈值的选择等
+    def group_articleimg_date(df):
 
-    # 更新结果到数据库gzhs_imgs_bydate
-    # 主键按照公众号+日期
-    def insert_groupbydate_res(df_con):
-        # 'date', 'article_count', 'c_negprob_mean', 'c_posprob_mean',
-        # 'c_neg_count', 'c_pos_count', 'c_neg_ratio', 'c_pos_ratio',
-        # 'id_group_date', 'biz'
+        # 重命名
+        # articles.id,articles.p_date,articles.t_date,articles.mov,articles.cover_neg,articles.cover_pos "
+        def rename_column_fromdb():
+            df.rename(columns={0: 'id', 1: 'p_date', 2: 't_date', 3: 'mov', 4: 'cover_neg', 5: 'cover_pos'},
+                      inplace=True)
 
-        # 只要0,2,3 id neg pos
-        # df_con = df_con.iloc[:, [2, 3, 0]]
+        # 一些指标的计算
+        def cal_colunms():
+            rename_column_fromdb()
 
-        # 转成元组方便mysql插入
+            # 增加一列用于把ts换成天数(后续可以精确的时间) 前面的中扩繁相当于传入的参数x
+            # 这个函数的作用是聚合,因此不需要time
+            df['p_date'] = df[['p_date', ]].apply(
+                lambda x: datetime.fromtimestamp(x['p_date']).date() if not np.isnan(x['p_date']) else x['p_date'],
+                axis=1)
 
-        merge_result_tuples = [tuple(xi) for xi in df_con.values]
-        # print(merge_result_tuples)
+            df['t_date'] = df[['t_date', ]].apply(
+                lambda x: datetime.fromtimestamp(x['t_date']).date() if not np.isnan(x['t_date']) else x['t_date'],
+                axis=1)
 
-        # 更新语句 按照id更新
-        insert_gzhs = (
-            "INSERT IGNORE INTO gzhs_imgs_bydate "
-            "(date,article_count, c_negprob_mean, c_posprob_mean,c_neg_count, c_pos_count, c_neg_ratio, c_pos_ratio,id_group_date,biz) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ")
+            # 聚合操作
+            # df_agg_date = df.groupby('date').agg({0: 'count', })
+            # transform操作
+            # df['id_count'] = df.groupby('date')[0].transform('count')
+            df['c_neg_count'] = df[['cover_neg', ]].apply(lambda x: 1 if x['cover_neg'] >= 0.7 else 0, axis=1)
+            df['c_pos_count'] = df[['cover_pos', ]].apply(lambda x: 1 if x['cover_pos'] >= 0.7 else 0, axis=1)
 
-        cur_sent = cnx.cursor(buffered=True)
-        try:
-            cur_sent.executemany(insert_gzhs, merge_result_tuples)
-            cnx.commit()
-        except mysql.connector.Error as err:
-            print(err)
-        finally:
-            cur_sent.close()
-
-    def ana_sql_df(df):
-
-        # 分成了可迭代的对象,每个都是df
-        # for i in df.groupby(1):
-
-        # 增加一列用于把ts换成天数(后续可以精确的时间) 前面的中扩繁相当于传入的参数x
-        df['datetime'] = df[[1, ]].apply(lambda x: datetime.fromtimestamp(x[1]), axis=1)
-        df['date'] = df[['datetime', ]].apply(lambda x: datetime.date(x['datetime']), axis=1)
-        df['time'] = df[['datetime', ]].apply(lambda x: datetime.time(x['datetime']), axis=1)
-
-        # 计算交易日期
-        def cal_treade_date():
-            pass
-
-        # 转换完以后要新增加一列用于计算交易日期
-        cal_treade_date()
-
-        # print(df.head())
-
-        # 聚合操作
-        # df_agg_date = df.groupby('date').agg({0: 'count', })
-
-        # transform操作
-        # df['id_count'] = df.groupby('date')[0].transform('count')
-
-        # 自定义apply函数
-        def count_prob(df_group):
-            df_group['c_neg_count'] = df[[3, ]].apply(lambda x: 1 if x[3] > 0.7 else 0, axis=1)
-            df_group['c_pos_count'] = df[[4, ]].apply(lambda x: 1 if x[4] > 0.7 else 0, axis=1)
-            # print(df_group)
-            return df_group
-
-        # 在组中计算概率阈值计数
-        df_g = df.groupby(['date'], as_index=False).apply(lambda x: count_prob(x))
+        # # 自定义apply函数用于计算概率
+        # def count_prob(df_group):
+        #     df_group['c_neg_count'] = df[['cover_neg', ]].apply(lambda x: 1 if x['cover_neg'] > 0.7 else 0, axis=1)
+        #     df_group['c_pos_count'] = df[['cover_pos', ]].apply(lambda x: 1 if x['cover_pos'] > 0.7 else 0, axis=1)
+        #     # print(df_group)
+        #     return df_group
+        #
+        # # 在组中计算概率阈值计数
+        # df_g = df.groupby(['p_date'], as_index=False).apply(lambda x: count_prob(x))
+        # df_g = df.groupby(['t_date'], as_index=False).apply(lambda x: count_prob(x))
 
         # 计算完以后按照日期分组并聚合计算 只保留那些需要的列
         # !!!!!实际日期非交易日期
-        df_agg = df_g.groupby(['date'], as_index=False).agg(
-            {0: 'count', 3: 'mean', 4: 'mean', 'c_neg_count': 'sum', 'c_pos_count': 'sum'})
 
-        # 分组后继续计算
-        # df_agg = pd.DataFrame(df_agg)
-        df_agg['c_neg_ratio'] = df_agg[[0, 'c_neg_count']].apply(lambda x: x['c_neg_count'] / x[0], axis=1)
-        df_agg['c_pos_ratio'] = df_agg[[0, 'c_pos_count']].apply(lambda x: x['c_pos_count'] / x[0], axis=1)
+        # 聚合的方式
+        def group_articles(column_name='t_date'):
+            # 按照t_date分组
+            df_group = df.groupby([column_name], as_index=False).agg(
+                {'id': 'count', 'cover_neg': 'mean', 'cover_pos': 'mean', 'c_neg_count': 'sum',
+                 'c_pos_count': 'sum'})
+            # 分组后重命名
+            df_group.rename(
+                columns={'id': 'article_count', 'cover_neg': 'c_negprob_mean', 'cover_pos': 'c_posprob_mean'},
+                inplace=True)
 
-        #
-        # 和沪深300对比分析 左外连接
-        # df_k = get_kline()
-        # df_con = pd.merge(df_agg, df_k, how='left', on=['date'])
+            # 分组后继续计算
 
-        # 重命名
-        df_agg = pd.DataFrame(df_agg)
-        df_agg = df_agg.rename({0: 'article_count', 3: 'c_negprob_mean', 4: 'c_posprob_mean'}, axis='columns')
+            df_group['c_neg_ratio'] = df_group[['article_count', 'c_neg_count']].apply(
+                lambda x: x['c_neg_count'] / x['article_count'],
+                axis=1)
+            df_group['c_pos_ratio'] = df_group[['article_count', 'c_pos_count']].apply(
+                lambda x: x['c_pos_count'] / x['article_count'],
+                axis=1)
 
-        # 生成主键用于存储 主键=公众号+日期
-        def create_pk(old_df):
-            old_df['id_group_date'] = old_df[['date', ]].apply(lambda x: biz_name + str(x['date']), axis=1)
-            old_df['biz'] = biz_name
-            return old_df
+            # 添加额外的列
+            df_group['biz'] = filter_biz
+            df_group['id_group_date'] = df_group[[column_name, ]].apply(
+                lambda x: filter_biz + str(x[column_name]), axis=1)
 
-        df_agg = create_pk(df_agg)
+            # 重新排列
+            df_group = df_group[
+                ['id_group_date', 'biz', column_name, 'article_count', 'c_negprob_mean', 'c_posprob_mean',
+                 'c_neg_count',
+                 'c_pos_count', 'c_neg_ratio', 'c_pos_ratio']]
 
-        # 存储
-        # df_agg.to_csv('biz_ana/' + biz_name + '.csv')
+            # df_group.to_csv('test.csv')
+            return df_group
+
+        # 更新结果到数据库gzhs_imgs_bydate
+        # 主键按照公众号+日期
+        def insert_groupbydate_res(df_group, table_name):
+            # 'date', 'article_count', 'c_negprob_mean', 'c_posprob_mean',
+            # 'c_neg_count', 'c_pos_count', 'c_neg_ratio', 'c_pos_ratio',
+            # 'id_group_date', 'biz'
+
+            # 只要0,2,3 id neg pos
+            # df_con = df_con.iloc[:, [2, 3, 0]]
+
+            # 转成元组方便mysql插入
+
+            merge_result_tuples = [tuple(xi) for xi in df_group.values]
+            # print(merge_result_tuples)
+
+            # 更新语句 按照id更新
+            insert_gzhs = (
+                    "INSERT IGNORE INTO  " + str(table_name) +
+                    " (id_group_date,biz,date,article_count, c_negprob_mean, c_posprob_mean,c_neg_count, c_pos_count, c_neg_ratio, c_pos_ratio) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ")
+
+            cur_sent = cnx.cursor(buffered=True)
+            try:
+                cur_sent.executemany(insert_gzhs, merge_result_tuples)
+                cnx.commit()
+            except mysql.connector.Error as err:
+                print(err)
+            finally:
+                cur_sent.close()
+
+        # 计算一些指标
+        cal_colunms()
+
+        # 根据t_date聚合
+        df_g = group_articles(column_name='t_date')
+
         # 需要将结果存储到数据库gzhs_imgs_bydate
-        # df_agg.to_csv('biz_ana/' + biz_name + '.csv')
-        insert_groupbydate_res(df_agg)
+        insert_groupbydate_res(df_g, 'gzhs_imgs_bytdate')
 
     # ----------------------- 开始运行主函数-------------------------#
     # 建立连接
@@ -796,13 +811,13 @@ def cal_from_db(biz_name):
     # 合并其他表
     # 筛选条件按照指定公众号查询
     #
-    count_row, df_biz = select_biz_join(biz_name, [date(2021, 6, 1), date(2022, 6, 1)])
+    count_row, df_article_img = select_article_img()
 
     if count_row == 0:
         return
     else:
         # 数据分析
-        ana_sql_df(df_biz)
+        group_articleimg_date(df_article_img)
 
     # 关闭数据库连接
     cnx.close()
@@ -1094,8 +1109,9 @@ if __name__ == '__main__':
     # 计算
     # 不在数据库中计算,在外部计算,方便修改函数
     # 原型成熟了可以用函数计算
-    get_financial_data()
-    # gzhs_list = select_from_gzhs()
-    # for biz in gzhs_list:
-    #     print('正在分析:', biz[0])
-    #     map_articles_tradedate(biz[0], [date(2021, 6, 1), date(2022, 6, 1)])
+    # get_financial_data()
+    # merge_article_img('MjM5NDEzMTAwMA==', [date(2021, 6, 1), date(2022, 6, 1)])
+    gzhs_list = select_from_gzhs()
+    for biz in gzhs_list:
+        print('正在分析:', biz[0])
+        merge_article_img(biz[0], [date(2021, 6, 1), date(2022, 6, 1)])
