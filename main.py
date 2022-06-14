@@ -809,7 +809,7 @@ def cal_from_db(biz_name):
 
 
 # 创建一个表把自然日期映射到交易日期
-def map_info_trade():
+def create_info_trade():
     # 从tu api获取数据
     def get_from_tu():
         # 获取K线数据的日期
@@ -898,6 +898,121 @@ def map_info_trade():
 
     # 把合并好的自然日期与交易日期导入数据库
     insert_into_infodate(cal_treade_date())
+
+
+# 查询info_date中的日期与交易日期之间的映射关系
+# 把article中的p_date映射到t_date,都是ts的数据类型
+# 用法 map_articles_tradedate('MjM5NzQ5MTkyMA==', [date(2021, 6, 1), date(2022, 6, 1)])
+def map_articles_tradedate(filter_bizname, filter_date):
+    # 先从article总表中查找,和infodate匹配后插入交易日期
+    def select_article():
+        # 创建游标
+        cursor_sent = cnx.cursor(buffered=True)
+
+        # 查询id和用于计算的值
+        query_str = (
+            "SELECT articles.id,articles.p_date "
+            "FROM articles "
+            "WHERE articles.biz = %s AND "
+            "articles.p_date BETWEEN %s AND %s "
+            "ORDER BY p_date ASC "
+        )
+
+        # date类型转ts
+        p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
+
+        # 执行查询语句
+        cursor_sent.execute(query_str, (filter_bizname, p_start_ts, p_end_ts))
+
+        # 按照id处理并转换为df
+        print('查询到记录条数:', cursor_sent.rowcount)
+
+        # cursor_sent.close()
+
+        return cursor_sent.rowcount, pd.DataFrame(cursor_sent)
+
+    # 先从article总表中查找,和infodate匹配后插入交易日期
+    def select_infodate():
+        # 创建游标
+        cursor_sent = cnx.cursor(buffered=True)
+
+        # 查询id和用于计算的值
+        query_str = (
+            "SELECT nature_date,nature_datetime_ts,day_tradedate,night_tradedate "
+            "FROM info_date "
+            "WHERE date_ts BETWEEN %s AND %s "
+        )
+
+        # date类型转ts
+        p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
+        # 执行查询语句
+        cursor_sent.execute(query_str, (p_start_ts, p_end_ts))
+
+        # 按照id处理并转换为df
+        print('查询到记录条数:', cursor_sent.rowcount)
+
+        # cursor_sent.close()
+
+        return cursor_sent.rowcount, pd.DataFrame(cursor_sent)
+
+    # 开始匹配
+    def map_date(df_article, df_info):
+        # 重命名
+        df_article.rename(columns={0: 'id', 1: 'datetime_ts'}, inplace=True)
+        df_info.rename(columns={0: 'date', 1: 'datetime_ts'}, inplace=True)
+
+        # 从df_article的ts中提取date
+        df_article['date'] = df_article[['datetime_ts', ]].apply(
+            lambda x: datetime.fromtimestamp(x['datetime_ts']).date(),
+            axis=1)
+
+        # join,左表为df_article,用date匹配
+        df_con = pd.merge(df_article, df_info, how='left', on=['date'])
+
+        # 匹配以后进行计算
+        df_con['article_to_tdate'] = df_con[['datetime_ts_x', 'datetime_ts_y', 2, 3]].apply(
+            lambda x: x[2] if x['datetime_ts_x'] <= x['datetime_ts_y'] else x[3], axis=1)
+
+        # 转换为ts方便入库
+        df_con['t_date'] = df_con[['article_to_tdate', ]].apply(
+            lambda x: pd.to_datetime(x['article_to_tdate']).timestamp(), axis=1)
+
+        # 如果需要检查的时候查看返回值
+        # df_con.to_csv('test.csv')
+
+        # 存储结果 筛选一下,换了位置方便数据库插入
+        df_con = df_con[['t_date', 'id']]
+        return df_con
+
+    # 把匹配后的文章交易日期存储到数据库
+    def update_to_article(df):
+        # 转成元组方便mysql插入
+        merge_result_tuples = [tuple(xi) for xi in df.values]
+        # print(merge_result_tuples)
+
+        # 更新语句 按照id更新
+        update_old = (
+            "UPDATE articles SET t_date = %s "
+            "WHERE id = %s ")
+
+        cur_sent = cnx.cursor(buffered=True)
+        try:
+            cur_sent.executemany(update_old, merge_result_tuples)
+            cnx.commit()
+        except mysql.connector.Error as err:
+            print(err)
+        finally:
+            cur_sent.close()
+
+    cnx = conn_to_db()
+    # 分别在2张表中查询并返回查询结果
+    count_article, df_article = select_article()
+    count_infodate, df_infodate = select_infodate()
+
+    # 匹配好以后返回到articl表
+    update_to_article(map_date(df_article, df_infodate))
+
+    cnx.close()
 
 
 # 获取所有的公众号列表
