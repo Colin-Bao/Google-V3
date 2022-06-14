@@ -1005,8 +1005,8 @@ def map_articles_tradedate(filter_bizname, filter_date):
             cur_sent.close()
 
     cnx = conn_to_db()
-    # 分别在2张表中查询并返回查询结果
 
+    # 分别在2张表中查询并返回查询结果
     count_article, df_article = select_article()
     count_infodate, df_infodate = select_infodate()
     if count_article == 0 or count_infodate == 0:
@@ -1031,6 +1031,47 @@ def select_from_gzhs():
     return cursor_query
 
 
+# 获取金融数据
+#
+def get_financial_data():
+    def get_from_tu():
+        # 获取K线数据的日期
+        tu = tushare_api.TuShareGet('20120101', '20220601')
+        # 获取的指数
+        df_kline = pd.DataFrame(tu.get_index('399300.SZ'))
+        # 转换为dt方便计算
+        df_kline['date_ts'] = df_kline[['trade_date', ]].apply(
+            lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').timestamp(),
+            axis=1)
+        # 排序以填充
+        df = df_kline.sort_values(by='date_ts')
+        # 筛选需要的行
+        return df
+
+    # 存储数据到mysql
+    def insert_into_csi300(df):
+        # df = df.astype(str)
+        cnx = conn_to_db()
+        # 转成元组方便mysql插入
+        result_tuples = [tuple(xi) for xi in df.values]
+        # 更新语句 按照id更新
+        insert_infodate = (
+            "INSERT IGNORE INTO csi300_index "
+            "(ts_code,trade_date,`close`,`open`,high,low,pre_close,`change`,pct_chg,vol,amount, date_ts) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ")
+        cur_sent = cnx.cursor(buffered=True)
+        try:
+            cur_sent.executemany(insert_infodate, result_tuples)
+            cnx.commit()
+        except mysql.connector.Error as err:
+            print(err)
+        finally:
+            cur_sent.close()
+            cnx.close()
+
+    insert_into_csi300(get_from_tu())
+
+
 if __name__ == '__main__':
     # init_settings()
     # transfer_learning(1)
@@ -1053,7 +1094,8 @@ if __name__ == '__main__':
     # 计算
     # 不在数据库中计算,在外部计算,方便修改函数
     # 原型成熟了可以用函数计算
-    gzhs_list = select_from_gzhs()
-    for biz in gzhs_list:
-        print('正在分析:', biz[0])
-        map_articles_tradedate(biz[0], [date(2021, 6, 1), date(2022, 6, 1)])
+    get_financial_data()
+    # gzhs_list = select_from_gzhs()
+    # for biz in gzhs_list:
+    #     print('正在分析:', biz[0])
+    #     map_articles_tradedate(biz[0], [date(2021, 6, 1), date(2022, 6, 1)])
