@@ -808,102 +808,99 @@ def cal_from_db(biz_name):
     cnx.close()
 
 
-# 创建一个表把自然日期映射到交易日期
-def create_info_trade():
-    # 从tu api获取数据
-    def get_from_tu():
-        # 获取K线数据的日期
-        tu = tushare_api.TuShareGet('20120101', '20220601')
-        # 获取的指数
-        df_kline = pd.DataFrame(tu.get_index('399300.SZ'))
-        # print(df_kline)
-        # 转换为dt方便计算
-        df_kline['day_tradedate'] = df_kline[['trade_date', ]].apply(
-            lambda x: datetime.strptime(x['trade_date'], '%Y%m%d'),
-            axis=1)
-        df_kline['datetime'] = df_kline[['trade_date', ]].apply(
-            lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').replace(hour=15, minute=0, second=0),
-            axis=1)
-        # 排序以填充
-        df = df_kline.sort_values(by='datetime')
-        # 筛选需要的行
-        df = df.loc[:, ['day_tradedate', 'datetime', 'ts_code', 'pct_chg', 'vol', 'amount']]
-        return df
-
-    # 计算交易日期
-    # 建立一张自然日期表和一张交易日期表,将自然日期映射到交易日期
-    def cal_treade_date():
-        # 生成自然时间序列
-        df_nature_date = pd.DataFrame(pd.date_range(start='1/1/2012', end='6/1/2022'))
-
-        # 重命名
-        df_nature_date.rename({0: 'nature_date'}, inplace=True, axis=1)
-
-        # 把dt64转为datetime
-        df_nature_date['datetime'] = df_nature_date[['nature_date', ]].apply(
-            lambda x: pd.to_datetime(x['nature_date']).replace(hour=15, minute=0, second=0),
-            axis=1)
-
-        # 设置收盘时间
-        df_kline = get_from_tu()
-        df_con = pd.merge(df_nature_date, df_kline, how='left', on=['datetime'])
-
-        # 设置填充 将节假日填充到交易日
-        df_con['day_tradedate'].fillna(method='bfill', inplace=True)
-
-        # 先进行内连接,如果小于3点为当天,大于3点为下一天(直接滞后一期)
-        df_con['night_tradedate'] = df_con['day_tradedate'].shift(-1)
-
-        # 把Timestamp转换回来不然mysql报错
-        df_con['date_ts'] = df_con[['nature_date', ]].apply(lambda x: pd.to_datetime(x['nature_date']).timestamp(),
-                                                            axis=1)
-        df_con['nature_date'] = df_con[['nature_date', ]].apply(lambda x: str(x['nature_date']), axis=1)
-        df_con['nature_datetime'] = df_con[['datetime', ]].apply(lambda x: str(x['datetime']), axis=1)
-        df_con['nature_datetime_ts'] = df_con[['nature_datetime', ]].apply(
-            lambda x: pd.to_datetime(x['nature_datetime']).timestamp(),
-            axis=1)
-        df_con['day_tradedate'] = df_con[['day_tradedate', ]].apply(lambda x: str(x['day_tradedate']), axis=1)
-        df_con['night_tradedate'] = df_con[['night_tradedate', ]].apply(lambda x: str(x['night_tradedate']), axis=1)
-
-        # print(df_con['nature_datetime_ts'])
-        # time.sleep(111111)
-        # 重新排列
-        df_con = df_con[
-            ['date_ts', 'nature_date', 'nature_datetime_ts', 'nature_datetime', 'day_tradedate', 'night_tradedate',
-             'ts_code', 'pct_chg',
-             'vol',
-             'amount']]
-
-        return df_con
-
-    # 存储数据到mysql
-    def insert_into_infodate(df):
-        cnx = conn_to_db()
-        # 转成元组方便mysql插入
-        result_tuples = [tuple(xi) for xi in df.values]
-        # 更新语句 按照id更新
-        insert_infodate = (
-            "INSERT IGNORE INTO info_date "
-            "(date_ts,nature_date, nature_datetime_ts,nature_datetime, day_tradedate, night_tradedate,ts_code, pct_chg, vol, amount) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ")
-        cur_sent = cnx.cursor(buffered=True)
-        try:
-            cur_sent.executemany(insert_infodate, result_tuples)
-            cnx.commit()
-        except mysql.connector.Error as err:
-            print(err)
-        finally:
-            cur_sent.close()
-            cnx.close()
-
-    # 把合并好的自然日期与交易日期导入数据库
-    insert_into_infodate(cal_treade_date())
-
-
 # 查询info_date中的日期与交易日期之间的映射关系
 # 把article中的p_date映射到t_date,都是ts的数据类型
 # 用法 map_articles_tradedate('MjM5NzQ5MTkyMA==', [date(2021, 6, 1), date(2022, 6, 1)])
 def map_articles_tradedate(filter_bizname, filter_date):
+    # 创建一个表把自然日期映射到交易日期
+    # 已经创建
+    def create_info_date():
+        # 从tu api获取数据
+        def get_from_tu():
+            # 获取K线数据的日期
+            tu = tushare_api.TuShareGet('20120101', '20220601')
+            # 获取的指数
+            df_kline = pd.DataFrame(tu.get_index('399300.SZ'))
+            # print(df_kline)
+            # 转换为dt方便计算
+            df_kline['day_tradedate'] = df_kline[['trade_date', ]].apply(
+                lambda x: datetime.strptime(x['trade_date'], '%Y%m%d'),
+                axis=1)
+            df_kline['datetime'] = df_kline[['trade_date', ]].apply(
+                lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').replace(hour=15, minute=0, second=0),
+                axis=1)
+            # 排序以填充
+            df = df_kline.sort_values(by='datetime')
+            # 筛选需要的行
+            df = df.loc[:, ['day_tradedate', 'datetime']]
+            return df
+
+        # 计算交易日期 用399300.SZ计算的
+        # 建立一张自然日期表和一张交易日期表,将自然日期映射到交易日期
+        def cal_treade_date():
+            # 生成自然时间序列
+            df_nature_date = pd.DataFrame(pd.date_range(start='1/1/2012', end='6/1/2022'))
+
+            # 重命名
+            df_nature_date.rename({0: 'nature_date'}, inplace=True, axis=1)
+
+            # 把dt64转为datetime
+            df_nature_date['datetime'] = df_nature_date[['nature_date', ]].apply(
+                lambda x: pd.to_datetime(x['nature_date']).replace(hour=15, minute=0, second=0),
+                axis=1)
+
+            # 设置收盘时间
+            df_kline = get_from_tu()
+            df_con = pd.merge(df_nature_date, df_kline, how='left', on=['datetime'])
+
+            # 设置填充 将节假日填充到交易日
+            df_con['day_tradedate'].fillna(method='bfill', inplace=True)
+
+            # 先进行内连接,如果小于3点为当天,大于3点为下一天(直接滞后一期)
+            df_con['night_tradedate'] = df_con['day_tradedate'].shift(-1)
+
+            # 把Timestamp转换回来不然mysql报错
+            df_con['date_ts'] = df_con[['nature_date', ]].apply(lambda x: pd.to_datetime(x['nature_date']).timestamp(),
+                                                                axis=1)
+            df_con['nature_date'] = df_con[['nature_date', ]].apply(lambda x: str(x['nature_date']), axis=1)
+            df_con['nature_datetime'] = df_con[['datetime', ]].apply(lambda x: str(x['datetime']), axis=1)
+            df_con['nature_datetime_ts'] = df_con[['nature_datetime', ]].apply(
+                lambda x: pd.to_datetime(x['nature_datetime']).timestamp(),
+                axis=1)
+            df_con['day_tradedate'] = df_con[['day_tradedate', ]].apply(lambda x: str(x['day_tradedate']), axis=1)
+            df_con['night_tradedate'] = df_con[['night_tradedate', ]].apply(lambda x: str(x['night_tradedate']), axis=1)
+
+            # print(df_con['nature_datetime_ts'])
+            # time.sleep(111111)
+            # 重新排列
+            df_con = df_con[
+                ['date_ts', 'nature_date', 'nature_datetime_ts', 'nature_datetime', 'day_tradedate', 'night_tradedate']]
+
+            return df_con
+
+        # 存储数据到mysql
+        def insert_into_infodate(df):
+            cnx = conn_to_db()
+            # 转成元组方便mysql插入
+            result_tuples = [tuple(xi) for xi in df.values]
+            # 更新语句 按照id更新
+            insert_infodate = (
+                "INSERT IGNORE INTO info_date "
+                "(date_ts,nature_date, nature_datetime_ts,nature_datetime, day_tradedate, night_tradedate) "
+                "VALUES (%s,%s,%s,%s,%s,%s) ")
+            cur_sent = cnx.cursor(buffered=True)
+            try:
+                cur_sent.executemany(insert_infodate, result_tuples)
+                cnx.commit()
+            except mysql.connector.Error as err:
+                print(err)
+            finally:
+                cur_sent.close()
+                cnx.close()
+
+        # 把合并好的自然日期与交易日期导入数据库
+        insert_into_infodate(cal_treade_date())
+
     # 先从article总表中查找,和infodate匹配后插入交易日期
     def select_article():
         # 创建游标
@@ -973,9 +970,12 @@ def map_articles_tradedate(filter_bizname, filter_date):
         df_con['article_to_tdate'] = df_con[['datetime_ts_x', 'datetime_ts_y', 2, 3]].apply(
             lambda x: x[2] if x['datetime_ts_x'] <= x['datetime_ts_y'] else x[3], axis=1)
 
+        # df_con.to_csv('test.csv')
         # 转换为ts方便入库
+        # 有空的日期转换不了timestamp,加了一个判断
         df_con['t_date'] = df_con[['article_to_tdate', ]].apply(
-            lambda x: pd.to_datetime(x['article_to_tdate']).timestamp(), axis=1)
+            lambda x: pd.to_datetime(x['article_to_tdate']).timestamp() if x['article_to_tdate'] is not np.nan else x[
+                'article_to_tdate'], axis=1)
 
         # 如果需要检查的时候查看返回值
         # df_con.to_csv('test.csv')
@@ -1006,8 +1006,12 @@ def map_articles_tradedate(filter_bizname, filter_date):
 
     cnx = conn_to_db()
     # 分别在2张表中查询并返回查询结果
+
     count_article, df_article = select_article()
     count_infodate, df_infodate = select_infodate()
+    if count_article == 0 or count_infodate == 0:
+        cnx.close()
+        return
 
     # 匹配好以后返回到articl表
     update_to_article(map_date(df_article, df_infodate))
@@ -1052,4 +1056,4 @@ if __name__ == '__main__':
     gzhs_list = select_from_gzhs()
     for biz in gzhs_list:
         print('正在分析:', biz[0])
-        cal_from_db(biz[0])
+        map_articles_tradedate(biz[0], [date(2021, 6, 1), date(2022, 6, 1)])
