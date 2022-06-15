@@ -669,6 +669,7 @@ def merge_article_img(filter_biz, filter_date):
             "SELECT articles.id,articles.p_date,articles.t_date,articles.mov,articles.cover_neg,articles.cover_pos "
             "FROM articles INNER JOIN article_imgs on articles.id = article_imgs.id "
             "WHERE articles.biz = %s AND "
+            "articles.t_date IS NOT NULL AND "
             "articles.p_date BETWEEN %s AND %s "
             "ORDER BY articles.p_date ASC "
         )
@@ -702,13 +703,13 @@ def merge_article_img(filter_biz, filter_date):
 
             # 增加一列用于把ts换成天数(后续可以精确的时间) 前面的中扩繁相当于传入的参数x
             # 这个函数的作用是聚合,因此不需要time
-            df['p_date'] = df[['p_date', ]].apply(
-                lambda x: datetime.fromtimestamp(x['p_date']).date() if not np.isnan(x['p_date']) else x['p_date'],
-                axis=1)
+            df['p_date'] = df[['p_date', ]].apply(lambda x: datetime.fromtimestamp(x['p_date']).date(), axis=1)
 
-            df['t_date'] = df[['t_date', ]].apply(
-                lambda x: datetime.fromtimestamp(x['t_date']).date() if not np.isnan(x['t_date']) else x['t_date'],
-                axis=1)
+            df['t_date'] = df[['t_date', ]].apply(lambda x: datetime.fromtimestamp(x['t_date']).date(), axis=1)
+            # df['t_date'] = df[['t_date', ]].apply(
+            #     lambda x: datetime.fromtimestamp(x['t_date']).date() if not np.isnan(x['t_date']) else x['t_date'],
+            #     axis=1)
+            # print(df['t_date'])
 
             # 聚合操作
             # df_agg_date = df.groupby('date').agg({0: 'count', })
