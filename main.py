@@ -656,6 +656,7 @@ def show_imgsent_from_db():
 
 # 一些用于计算的函数
 # 用于join article和article_imgs表,并把每个公众号按照日期聚合得到gzh_imgs_bydate表
+# 如果不按照公众号聚合也可以,得到总表
 def merge_article_img(filter_biz, filter_date):
     # 先把数据取出来再计算(聚合公众号)
     # 条件查询 合并其他表,更改的时候填写需要改的字段即可
@@ -829,93 +830,54 @@ def merge_article_img(filter_biz, filter_date):
 # 用法 map_articles_tradedate('MjM5NzQ5MTkyMA==', [date(2021, 6, 1), date(2022, 6, 1)])
 def map_articles_tradedate(filter_bizname, filter_date):
     # 创建一个表把自然日期映射到交易日期
-    # 已经创建
     def create_info_date():
-        # 从tu api获取数据
-        def get_from_tu():
-            # 获取K线数据的日期
-            tu = tushare_api.TuShareGet('20120101', '20220601')
-            # 获取的指数
-            df_kline = pd.DataFrame(tu.get_index('399300.SZ'))
-            # print(df_kline)
-            # 转换为dt方便计算
-            df_kline['day_tradedate'] = df_kline[['trade_date', ]].apply(
-                lambda x: datetime.strptime(x['trade_date'], '%Y%m%d'),
-                axis=1)
-            df_kline['datetime'] = df_kline[['trade_date', ]].apply(
-                lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').replace(hour=15, minute=0, second=0),
-                axis=1)
-            # 排序以填充
-            df = df_kline.sort_values(by='datetime')
-            # 筛选需要的行
-            df = df.loc[:, ['day_tradedate', 'datetime']]
-            return df
 
-        # 计算交易日期 用399300.SZ计算的
-        # 建立一张自然日期表和一张交易日期表,将自然日期映射到交易日期
-        def cal_treade_date():
-            # 生成自然时间序列
-            df_nature_date = pd.DataFrame(pd.date_range(start='1/1/2012', end='6/1/2022'))
+        # 获得结果用于计算
+        def select_info_date():
+            # 创建游标
+            cursor_s = cnx.cursor(buffered=True)
 
-            # 重命名
-            df_nature_date.rename({0: 'nature_date'}, inplace=True, axis=1)
+            # 查询id和用于计算的值
+            query_str = (
+                "SELECT date_ts "
+                "FROM info_date "
+                "ORDER BY date_ts ASC "
+            )
+            cursor_s.execute(query_str)
+            return pd.DataFrame(cursor_s)
 
-            # 把dt64转为datetime
-            df_nature_date['datetime'] = df_nature_date[['nature_date', ]].apply(
-                lambda x: pd.to_datetime(x['nature_date']).replace(hour=15, minute=0, second=0),
-                axis=1)
+        def update_info_date(df_info):
+            # 先生成字段
+            def create_colun():
+                # 创建游标
+                cursor_s = cnx.cursor(buffered=True)
 
-            # 设置收盘时间
-            df_kline = get_from_tu()
-            df_con = pd.merge(df_nature_date, df_kline, how='left', on=['datetime'])
+                # 增加一周中的日期虚拟变量
+                alter_str = (
+                    "ALTER TABLE info_date "
+                    "ADD `monday` int,ADD `tuesday` int,ADD `wednesday` int,"
+                    "ADD `thursday` int,ADD `friday` int,ADD `saturday` int"
+                )
+                cursor_s.execute(alter_str)
 
-            # 设置填充 将节假日填充到交易日
-            df_con['day_tradedate'].fillna(method='bfill', inplace=True)
+            def update():
+                # 先获得每周星期几
+                df_info['weekday'] = df_info[[0, ]].apply(lambda x: str(datetime.fromtimestamp(x[0]).weekday() + 1),
+                                                          axis=1)
+                df = df_info[['weekday', 0]]
+                merge_result_tuples = [tuple(xi) for xi in df.values]
+                # print(merge_result_tuples)
 
-            # 先进行内连接,如果小于3点为当天,大于3点为下一天(直接滞后一期)
-            df_con['night_tradedate'] = df_con['day_tradedate'].shift(-1)
+                cursor_s = cnx.cursor(buffered=True)
+                # 更新语句 按照id更新
+                update_old = (
+                    "UPDATE info_date SET weekday = %s "
+                    "WHERE date_ts = %s ")
+                cursor_s.executemany(update_old, merge_result_tuples)
 
-            # 把Timestamp转换回来不然mysql报错
-            df_con['date_ts'] = df_con[['nature_date', ]].apply(lambda x: pd.to_datetime(x['nature_date']).timestamp(),
-                                                                axis=1)
-            df_con['nature_date'] = df_con[['nature_date', ]].apply(lambda x: str(x['nature_date']), axis=1)
-            df_con['nature_datetime'] = df_con[['datetime', ]].apply(lambda x: str(x['datetime']), axis=1)
-            df_con['nature_datetime_ts'] = df_con[['nature_datetime', ]].apply(
-                lambda x: pd.to_datetime(x['nature_datetime']).timestamp(),
-                axis=1)
-            df_con['day_tradedate'] = df_con[['day_tradedate', ]].apply(lambda x: str(x['day_tradedate']), axis=1)
-            df_con['night_tradedate'] = df_con[['night_tradedate', ]].apply(lambda x: str(x['night_tradedate']), axis=1)
+            update()
 
-            # print(df_con['nature_datetime_ts'])
-            # time.sleep(111111)
-            # 重新排列
-            df_con = df_con[
-                ['date_ts', 'nature_date', 'nature_datetime_ts', 'nature_datetime', 'day_tradedate', 'night_tradedate']]
-
-            return df_con
-
-        # 存储数据到mysql
-        def insert_into_infodate(df):
-            cnx = conn_to_db()
-            # 转成元组方便mysql插入
-            result_tuples = [tuple(xi) for xi in df.values]
-            # 更新语句 按照id更新
-            insert_infodate = (
-                "INSERT IGNORE INTO info_date "
-                "(date_ts,nature_date, nature_datetime_ts,nature_datetime, day_tradedate, night_tradedate) "
-                "VALUES (%s,%s,%s,%s,%s,%s) ")
-            cur_sent = cnx.cursor(buffered=True)
-            try:
-                cur_sent.executemany(insert_infodate, result_tuples)
-                cnx.commit()
-            except mysql.connector.Error as err:
-                print(err)
-            finally:
-                cur_sent.close()
-                cnx.close()
-
-        # 把合并好的自然日期与交易日期导入数据库
-        insert_into_infodate(cal_treade_date())
+        update_info_date(select_info_date())
 
     # 先从article总表中查找,和infodate匹配后插入交易日期
     def select_article():
@@ -927,6 +889,7 @@ def map_articles_tradedate(filter_bizname, filter_date):
             "SELECT articles.id,articles.p_date "
             "FROM articles "
             "WHERE articles.biz = %s AND "
+            "articles.t_date IS NULL AND "
             "articles.p_date BETWEEN %s AND %s "
             "ORDER BY p_date ASC "
         )
@@ -988,10 +951,11 @@ def map_articles_tradedate(filter_bizname, filter_date):
 
         # df_con.to_csv('test.csv')
         # 转换为ts方便入库
+        # 空的日期是因为info_date的交易日期最后一行滞后了
+        df_con.dropna(inplace=True)
         # 有空的日期转换不了timestamp,加了一个判断
         df_con['t_date'] = df_con[['article_to_tdate', ]].apply(
-            lambda x: pd.to_datetime(x['article_to_tdate']).timestamp() if x['article_to_tdate'] is not np.nan else x[
-                'article_to_tdate'], axis=1)
+            lambda x: pd.to_datetime(x['article_to_tdate']).timestamp(), axis=1)
 
         # 如果需要检查的时候查看返回值
         # df_con.to_csv('test.csv')
@@ -1021,6 +985,8 @@ def map_articles_tradedate(filter_bizname, filter_date):
             cur_sent.close()
 
     cnx = conn_to_db()
+    # 先创建
+    # create_info_date()
 
     # 分别在2张表中查询并返回查询结果
     count_article, df_article = select_article()
@@ -1050,11 +1016,11 @@ def select_from_gzhs():
 # 获取金融数据
 #
 def get_financial_data():
-    def get_from_tu():
+    def get_from_tu(ts_code):
         # 获取K线数据的日期
         tu = tushare_api.TuShareGet('20120101', '20220601')
         # 获取的指数
-        df_kline = pd.DataFrame(tu.get_index('399300.SZ'))
+        df_kline = pd.DataFrame(tu.get_index(ts_code))
         # 转换为dt方便计算
         df_kline['date_ts'] = df_kline[['trade_date', ]].apply(
             lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').timestamp(),
@@ -1064,17 +1030,27 @@ def get_financial_data():
         # 筛选需要的行
         return df
 
+    def create_table(table_name):
+        create_sql = (
+                "CREATE TABLE IF NOT EXISTS  " + table_name +
+                " (`date_ts` int NOT NULL,`ts_code` varchar(40),`trade_date` varchar(40),"
+                "`close` float,`open` float,`high` float,`low` float,`pre_close` float,`change` float,"
+                "`pct_chg` float,`vol` float,`amount` float,"
+                "PRIMARY KEY (`date_ts`),"
+                "KEY `ix_date` (`date_ts`) USING BTREE)"
+        )
+        cur_create = cnx.cursor()
+        cur_create.execute(create_sql)
+
     # 存储数据到mysql
-    def insert_into_csi300(df):
-        # df = df.astype(str)
-        cnx = conn_to_db()
+    def insert_into_fintable(df, table_name):
         # 转成元组方便mysql插入
         result_tuples = [tuple(xi) for xi in df.values]
         # 更新语句 按照id更新
         insert_infodate = (
-            "INSERT IGNORE INTO csi300_index "
-            "(ts_code,trade_date,`close`,`open`,high,low,pre_close,`change`,pct_chg,vol,amount, date_ts) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ")
+                "INSERT IGNORE INTO  " + table_name +
+                " (ts_code,trade_date,`close`,`open`,high,low,pre_close,`change`,pct_chg,vol,amount, date_ts) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ")
         cur_sent = cnx.cursor(buffered=True)
         try:
             cur_sent.executemany(insert_infodate, result_tuples)
@@ -1083,9 +1059,123 @@ def get_financial_data():
             print(err)
         finally:
             cur_sent.close()
-            cnx.close()
 
-    insert_into_csi300(get_from_tu())
+    cnx = conn_to_db()
+
+    index_list = ['399300.SZ', '000001.SH']
+    for code in index_list:
+        df = get_from_tu(code)
+        create_table('`' + code + '`')
+        insert_into_fintable(df, '`' + code + '`')
+
+    cnx.close()
+
+
+# 后面需要计算的字段在这里添加
+def cal_other_columns():
+    # 金融市场中的表
+    def add_return():
+        # 取出收盘价
+        def select_table():
+            table_list = ['`399300.SZ`', '`000001.SH`']
+            # 对数收益率
+            sql_str = ("SELECT date_ts,pre_close FROM `399300.SZ`"
+                       "ORDER BY date_ts ASC "
+                       )
+
+            cursor = cnx.cursor()
+            cursor.execute(sql_str)
+
+            return pd.DataFrame(cursor)
+
+        # 计算回报
+        # 返回可以插入的元组
+        def cal_return(df):
+            # 重命名方便计算
+            df.rename(columns={0: 'date_ts', 1: 'pre_close'}, inplace=True)
+            df['pre_close_lag1'] = df['pre_close'].shift(1)
+            # ln今日收盘价/昨日收盘价
+            df['log_return'] = df[['pre_close', 'pre_close_lag1', ]].apply(
+                lambda x: np.log(x['pre_close'] / x['pre_close_lag1']),
+                axis=1)
+            df['log_return_2'] = df[['log_return', ]].apply(
+                lambda x: np.square(x['log_return']),
+                axis=1)
+            # 删除空行
+            df.dropna(inplace=True)
+
+            # 保留插入数据库的列
+            df = df[['log_return', 'log_return_2', 'date_ts']]
+
+            # 全部转为str方便插入
+            df = df.astype(str)
+
+            return [tuple(xi) for xi in df.values]
+
+        # 更新计算好的数据
+        def update_table(data_tup):
+            sql_str = (
+                "UPDATE `399300.SZ` SET log_return = %s,log_return_2 = %s "
+                "WHERE date_ts = %s ")
+            cur = cnx.cursor()
+            cur.executemany(sql_str, data_tup)
+            cnx.commit()
+
+        # 先获得要计算的数据
+        res_tuple = cal_return(select_table())
+        # 更新计算好的数据
+        update_table(res_tuple)
+
+    # 增加时间戳
+    def add_date_ts(table_name):
+        # 取出表
+        def select_table():
+            # 对数收益率
+            sql_str = ("SELECT id_group_date,date FROM  " + table_name +
+                       " ORDER BY date ASC "
+                       )
+
+            cursor = cnx.cursor()
+            cursor.execute(sql_str)
+
+            return pd.DataFrame(cursor)
+
+        def cal_ts(df):
+            df.rename(columns={0: 'id_group_date', 1: 'date'}, inplace=True)
+            # 删除空行
+            df.dropna(inplace=True)
+            # 计算ts
+            df['date_ts'] = df[['date', ]].apply(
+                lambda x: datetime.strptime(x['date'], '%Y-%m-%d').timestamp(),
+                axis=1)
+
+            # 保留插入数据库的列
+            df = df[['date_ts', 'id_group_date']]
+
+            # 全部转为str方便插入
+            df = df.astype(str)
+
+            return [tuple(xi) for xi in df.values]
+
+        # 更新计算好的数据
+        def update_table(data_tup):
+            sql_str = (
+                    "UPDATE " + table_name +
+                    " SET date_ts = %s "
+                    "WHERE id_group_date = %s ")
+            cur = cnx.cursor()
+            cur.executemany(sql_str, data_tup)
+            cnx.commit()
+
+        update_table(cal_ts(select_table()))
+
+    cnx = conn_to_db()
+
+    # 已经计算结束
+    # add_return()
+    add_date_ts('`gzhs_imgs_bytdate`')
+
+    cnx.close()
 
 
 if __name__ == '__main__':
@@ -1112,7 +1202,9 @@ if __name__ == '__main__':
     # 原型成熟了可以用函数计算
     # get_financial_data()
     # merge_article_img('MjM5NDEzMTAwMA==', [date(2021, 6, 1), date(2022, 6, 1)])
-    gzhs_list = select_from_gzhs()
-    for biz in gzhs_list:
-        print('正在分析:', biz[0])
-        merge_article_img(biz[0], [date(2021, 6, 1), date(2022, 6, 1)])
+    cal_other_columns()
+    # map_articles_tradedate('MjM5NDEzMTAwMA==', [date(2021, 6, 1), date(2022, 6, 1)])
+    # gzhs_list = select_from_gzhs()
+    # for biz in gzhs_list:
+    #     print('正在分析:', biz[0])
+    #     merge_article_img(biz[0], [date(2021, 6, 1), date(2022, 6, 1)])
