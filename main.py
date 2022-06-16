@@ -40,7 +40,7 @@ def run_group_date():
 if __name__ == '__main__':
     # 1.爬取数据
     # 2.同步数据库
-    print("请在Navicat中传输更新sqlite数据库")
+    print("请在Navicat中传输更新sqlite数a据库")
 
     # 3.(已测试)把article的本地封面图片下载到新表article_img()
     # run_wc_img_info()
