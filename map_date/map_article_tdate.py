@@ -4,12 +4,10 @@
 # @Time      :2022/6/16 17:51
 # @Author    :Colin
 # @Note      :None
-import time
-from datetime import datetime, date
+from datetime import datetime
 
 import mysql.connector
 import pandas as pd
-import numpy as np
 
 
 # date类型转ts
@@ -26,11 +24,6 @@ def conn_to_db():
                                    database='wechat_offacc')
 
 
-# 创建表的算法,不小心删了
-def create_info_table():
-    pass
-
-
 # 先从article总表中查找,和infodate匹配后插入交易日期
 def select_article():
     cnx = conn_to_db()
@@ -40,7 +33,7 @@ def select_article():
     query_str = (
         "SELECT articles.id,articles.p_date "
         "FROM articles "
-        "WHERE articles.t_date IS NULL AND "
+        "WHERE articles.p_date_date IS NULL AND "
         "articles.p_date IS NOT NULL "
         "ORDER BY articles.p_date ASC "
     )
@@ -119,15 +112,17 @@ def join_map_date(df_article, df_info):
     df_con.dropna(inplace=True)
 
     # 转换为ts方便入库
-
     df_con['t_date'] = df_con[['article_to_tdate', ]].apply(
-        lambda x: pd.to_datetime(x['article_to_tdate']).timestamp(), axis=1)
+        lambda x: pd.to_datetime(x['article_to_tdate']).date(), axis=1)
+
+    df_con['t_date'] = df_con[['t_date', ]].apply(
+        lambda x: int(pd.to_datetime(x['t_date']).timestamp()), axis=1)
 
     # 如果需要检查的时候查看返回值
     # df_con.to_csv('test.csv')
 
     # 存储结果 筛选一下,换了位置方便数据库插入
-    df_con = df_con[['t_date', 'id']]
+    df_con = df_con[['t_date', 'date_ts', 'id']]
     return df_con
 
 
@@ -140,7 +135,7 @@ def update_to_article(df):
 
     # 更新语句 按照id更新
     update_old = (
-        "UPDATE articles SET t_date = %s "
+        "UPDATE articles SET t_date = %s,p_date_date = %s "
         "WHERE id = %s ")
 
     cur_sent = cnx.cursor(buffered=True)

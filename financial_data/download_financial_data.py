@@ -27,7 +27,7 @@ def get_from_tu(ts_code):
         lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').date(),
         axis=1)
     df_kline['date_ts'] = df_kline[['date_ts', ]].apply(
-        lambda x: pd.to_datetime(x['date_ts']).timestamp(),
+        lambda x: int(pd.to_datetime(x['date_ts']).timestamp()),
         axis=1)
     df_kline['weekday'] = df_kline[['trade_date', ]].apply(
         lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').weekday(),

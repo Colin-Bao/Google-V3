@@ -22,7 +22,7 @@ def select_fin_table():
     cnx = conn_to_db()
     table_list = ['`399300.SZ`', '`000001.SH`']
     # 对数收益率
-    sql_str = ("SELECT date_ts,pre_close,vol,log_return,log_return_2 FROM `399300.SZ`"
+    sql_str = ("SELECT * FROM `399300.SZ`"
                "ORDER BY date_ts ASC "
                )
 
