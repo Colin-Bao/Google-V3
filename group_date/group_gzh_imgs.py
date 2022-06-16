@@ -8,7 +8,6 @@
 from datetime import datetime
 import mysql.connector
 import pandas as pd
-import time
 
 
 # date类型转ts
