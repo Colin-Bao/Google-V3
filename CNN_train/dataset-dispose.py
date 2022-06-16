@@ -53,7 +53,7 @@ def mkdir(path):
 data_folder = 'twitter_dataset/images/'  # 原始图像目录
 new_data_folder = 'twitter2/'  # 新的文件夹
 # add label first
-label_file = open('twitter_dataset/ground_truth/twitter_five_agrees.txt', mode='r')
+label_file = open('../twitter_dataset/ground_truth/twitter_five_agrees.txt', mode='r')
 labels = label_file.readlines()
 label_file.close()
 

@@ -57,7 +57,7 @@ def predict_img_bymodel(x, model_path):
 # 根据返回的图像路径进行情绪计算
 # 传入df_att_img
 # 返回df_att_img+y
-def cal_img_sentiment(df_query):
+def merge_img_path(df_query):
     # 图片路径读取成可以预测的格式
     # 第2列是img路径
     x = filepath_to_img(df_query['local_cover'])
@@ -129,7 +129,7 @@ def predict_by_batch(batch_size=512):
         if i == 0:
             break
         # 根据路径计算情绪
-        df_sentiment = cal_img_sentiment(df_query)
+        df_sentiment = merge_img_path(df_query)
 
         # 还需要详细的情绪数据,细化的
         # 包括了封面党的位置,颜色,类型标签等数据库,用localurl作为主键和外键

@@ -1,28 +1,23 @@
 import time
 from datetime import datetime, date
 from PIL import Image
-import tushare_api
+from financial_data import tushare_api
 import os
 import mysql.connector
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from keras.models import load_model
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
-from keras.layers import GlobalAveragePooling2D, Dense
+from keras.layers import GlobalAveragePooling2D
 from keras.models import Model
 from keras import callbacks
-from keras_visualizer import visualizer
 import matplotlib.pyplot as plt
 
 import PIL
-from keras.utils.vis_utils import plot_model
-from tensorflow.keras.optimizers import Adagrad
 from keras import models
-from keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, Activation
+from keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
 from keras_visualizer import visualizer
-from keras import layers
 from keras.models import load_model
 from keras.preprocessing import image
 
@@ -224,167 +219,6 @@ def load_and_predict(h_path):
     df_con.to_csv('result_img.csv')
 
 
-# 重新遍历预测结果,得到的结果是对的
-# 传入的图片路径是一个可迭代的对象
-def load_and_predict_img(h_path, img_path):
-    # 忽略硬件加速的警告信息
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-    # df_img = pd.read_csv('result_img.csv')['2']
-    df_img = img_path
-    # print(df_img)
-    # df_res = pd.DataFrame()
-    # 把图片读取出来放到列表中
-    img = []
-    # ran_img = range(len(df_img))
-    for i in range(len(df_img)):
-        # print(df_img[i])
-        images = image.load_img(df_img[i], target_size=(299, 299))
-        x = image.img_to_array(images)
-        x = np.expand_dims(x, axis=0)
-        x = preprocess_input(x)
-        img.append(x)
-        # print(x)
-        # print('loading no.%s image' % i)
-    # 把图片数组联合在一起
-    x = np.concatenate([x for x in img])
-
-    model = load_model(h_path)
-    y_pred = pd.DataFrame(model.predict(x))
-    df_c = pd.concat([y_pred, df_img], axis=1)
-    df_c = df_c.rename(columns={0: 'neg', 1: 'pos', '2': 'path'})
-    df_c.to_csv('test_batch.csv')
-
-    # pd.DataFrame(y).to_csv('test_batch.csv')
-    #
-    # time.sleep(2222)
-    # for i in range(89):
-    #     img_path = df_img[i]
-    #     img = image.load_img(img_path)
-    #
-    #     x = image.img_to_array(img)
-    #     x = np.expand_dims(x, axis=0)
-    #     x = preprocess_input(x)
-    #
-    #     neg, pos = model.predict(x)[0]
-    #
-    #     # df_res = pd.concat([])
-    #     # print(neg, pos)
-    #
-    #     df_res = df_res.append({'img_path': img_path, 'neg': neg, 'pos': pos}, ignore_index=True)
-    #
-    # df_res.to_csv('img_predict.csv')
-
-
-# 用于可视化的类
-def plot_images(images, cls_true, cls_pred=None, cls_pred2=None, smooth=True, root_dir=''):
-    class_names = [0, 1]
-    assert len(images) == len(cls_true)
-
-    # Create figure with sub-plots.
-    fig, axes = plt.subplots(10, 5)
-
-    # Adjust vertical spacing.
-    if cls_pred is None:
-        hspace = 0.3
-    else:
-        hspace = 0.6
-    # fig.subplots_adjust(hspace=hspace, wspace=0.3)
-
-    # Interpolation type.
-    if smooth:
-        interpolation = 'spline16'
-    else:
-        interpolation = 'nearest'
-
-    for i, ax in enumerate(axes.flat):
-        # There may be less than 9 images, ensure it doesn't crash.
-        if i < len(images):
-            # Plot image.
-            # print(root_dir + images[i])
-            # temp_path = '/Users/mac/PycharmProjects/Investor-Sentiment/cover_imgs/MjM5NzQ5MTkyMA==/a65f47f09010b5db1d5b513982c3410e.png'
-            # img = Image.open(temp_path)
-            # plt.imshow(plt.imread(temp_path))
-            # plt.show()
-            ax.imshow(Image.open(root_dir + images[i]),
-                      interpolation=interpolation)
-
-            # Name of the true class.
-            # cls_true_name = class_names[cls_true[i]]
-
-            # Show true and predicted classes.
-            if cls_pred is None:
-                # xlabel = "True: {0}".format('')
-                pass
-            else:
-                # Name of the predicted class.
-                # print(cls_pred[i])
-                neg = cls_pred[i]
-                pos = cls_pred2[i]
-
-                # pre_0
-                label_str = "Pos:{0:.2f} \n Neg:{1:.2f}".format(pos, neg)
-
-                xlabel = label_str
-
-            # Show the classes as the label on the x-axis.
-            font_my = {'family': 'Times New Roman',
-                       'weight': 'normal', 'size': 8,
-                       }
-            # ax.set_xlabel(xlabel, font_my)
-
-        # Remove ticks from the plot.
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-    # Ensure the plot is shown correctly with multiple plots
-    # in a single Notebook cell.
-    # plt.savefig('sinc.png', dpi=300)
-    plt.show()
-
-
-# 在预测结果中按照行X列展示指定行的结果
-def show_result(columns, img_path='result_img.csv'):
-    df_pre = pd.read_csv(img_path)
-
-    df_pre = df_pre.iloc[columns]
-    # df_pre = df_pre.drop(labels=0, axis=1)
-    df_pre.index = range(len(df_pre))
-
-    path, neg, pos = df_pre['img_path'], df_pre['neg'], df_pre['pos']
-    images = path
-    cls_true = path
-
-    plot_images(images, cls_true, cls_pred=neg, cls_pred2=pos)
-
-
-# 展示神经网络的结构
-def show_cnn_structure():
-    def show_cnn2():
-        model1 = models.Sequential()
-        model1.add(Conv2D(8, (3, 3), padding="same", input_shape=(299, 299, 3), activation="relu"))
-        model1.add(Dense(16, input_shape=(784,)))
-        model1.add(Dense(8))
-        model1.add(Dense(4))
-        visualizer(model1, format='png', view=True)
-
-    def show_cnn():
-        # Building model architecture
-        model = models.Sequential()
-        model.add(Conv2D(8, (3, 3), padding="same", input_shape=(299, 299, 3), activation="relu"))
-        model.add(MaxPooling2D(pool_size=(3, 3)))
-
-        model.add(Flatten())
-        model.add(Dense(1024, activation="relu"))
-        model.add(Dense(2))
-        model.summary()
-
-        visualizer(model, format='png', view=True)
-
-    show_cnn()
-    show_cnn2()
-
-
 # 迁移学习
 # init_settings()
 # transfer_learning(1)
@@ -572,68 +406,6 @@ def predict_imgsent_from_db():
         i = rec_cont
 
 
-# 从数据库中提取情绪分析的结果
-def show_imgsent_from_db():
-    # 条件查询
-    def select_top_sent(filter_date):
-        # 创建游标
-        cursor_neg, cursor_pos = cnx.cursor(buffered=True), cnx.cursor(buffered=True)
-
-        # 分开查询
-        query_neg = ("SELECT local_cover,cover_neg,cover_pos FROM articles "
-                     "WHERE cover_neg IS NOT NULL AND "
-                     "p_date BETWEEN %s AND %s "
-                     "ORDER BY cover_neg DESC "
-                     "LIMIT 128")
-
-        query_pos = ("SELECT local_cover,cover_neg,cover_pos FROM articles "
-                     "WHERE cover_pos IS NOT NULL AND "
-                     "p_date BETWEEN %s AND %s "
-                     "ORDER BY cover_pos DESC "
-                     "LIMIT 128")
-        # date类型转ts
-        p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
-
-        # 执行查询语句
-        cursor_neg.execute(query_neg, (p_start_ts, p_end_ts))
-        cursor_pos.execute(query_pos, (p_start_ts, p_end_ts))
-
-        # 按照id处理并转换为dfx
-        print('查询到记录条数:', cursor_neg.rowcount)
-        # 切片
-        # df_sql = pd.DataFrame(cursor_query)
-        # df_sql = df_query[:512, :]
-        return pd.DataFrame(cursor_neg), pd.DataFrame(cursor_pos)
-
-    # 建立连接
-    cnx = conn_to_db()
-
-    # 按照消极情绪排行查询
-    # 筛选公众号+日期+条数
-    df_neg, df_pos = select_top_sent([date(2021, 6, 1), date(2022, 6, 1)])
-
-    # 断开连接
-    cnx.close()
-
-    # 调用可视化
-    df_neg, df_pos = df_neg.iloc[:50, :], df_pos.iloc[:50, :]
-    # print(df_neg[0])
-    # time.sleep(1111)
-    path, neg, pos = df_neg[0], df_neg[1], df_neg[2],
-    images = path
-    cls_true = path
-    # print()
-
-    plot_images(images, cls_true, cls_pred=neg, cls_pred2=pos,
-                root_dir='/Users/mac/PycharmProjects/Investor-Sentiment/')
-
-    path, neg, pos = df_pos[0], df_pos[1], df_pos[2],
-    images = path
-    cls_true = path
-    plot_images(images, cls_true, cls_pred=neg, cls_pred2=pos,
-                root_dir='/Users/mac/PycharmProjects/Investor-Sentiment/')
-
-
 # 一些用于计算的函数
 # 用于join article和article_imgs表,并把每个公众号按照日期聚合得到gzh_imgs_bydate表
 # 如果不按照公众号聚合也可以,得到总表
@@ -805,182 +577,6 @@ def merge_article_img(filter_biz, filter_date):
     cnx.close()
 
 
-# 查询info_date中的日期与交易日期之间的映射关系
-# 把article中的p_date映射到t_date,都是ts的数据类型
-# 用法 map_articles_tradedate('MjM5NzQ5MTkyMA==', [date(2021, 6, 1), date(2022, 6, 1)])
-def map_articles_tdate(filter_bizname, filter_date):
-    # 创建一个表把自然日期映射到交易日期
-    def create_info_date():
-
-        # 获得结果用于计算
-        def select_info_date():
-            # 创建游标
-            cursor_s = cnx.cursor(buffered=True)
-
-            # 查询id和用于计算的值
-            query_str = (
-                "SELECT date_ts "
-                "FROM info_date "
-                "ORDER BY date_ts ASC "
-            )
-            cursor_s.execute(query_str)
-            return pd.DataFrame(cursor_s)
-
-        def update_info_date(df_info):
-            # 先生成字段
-            def create_colun():
-                # 创建游标
-                cursor_s = cnx.cursor(buffered=True)
-
-                # 增加一周中的日期虚拟变量
-                alter_str = (
-                    "ALTER TABLE info_date "
-                    "ADD `monday` int,ADD `tuesday` int,ADD `wednesday` int,"
-                    "ADD `thursday` int,ADD `friday` int,ADD `saturday` int"
-                )
-                cursor_s.execute(alter_str)
-
-            def update():
-                # 先获得每周星期几
-                df_info['weekday'] = df_info[[0, ]].apply(lambda x: str(datetime.fromtimestamp(x[0]).weekday() + 1),
-                                                          axis=1)
-                df = df_info[['weekday', 0]]
-                merge_result_tuples = [tuple(xi) for xi in df.values]
-                # print(merge_result_tuples)
-
-                cursor_s = cnx.cursor(buffered=True)
-                # 更新语句 按照id更新
-                update_old = (
-                    "UPDATE info_date SET weekday = %s "
-                    "WHERE date_ts = %s ")
-                cursor_s.executemany(update_old, merge_result_tuples)
-
-            update()
-
-        update_info_date(select_info_date())
-
-    # 先从article总表中查找,和infodate匹配后插入交易日期
-    def select_article():
-        # 创建游标
-        cursor_sent = cnx.cursor(buffered=True)
-
-        # 查询id和用于计算的值
-        query_str = (
-            "SELECT articles.id,articles.p_date "
-            "FROM articles "
-            "WHERE articles.biz = %s AND "
-            "articles.t_date IS NULL AND "
-            "articles.p_date BETWEEN %s AND %s "
-            "ORDER BY p_date ASC "
-        )
-
-        # date类型转ts
-        p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
-
-        # 执行查询语句
-        cursor_sent.execute(query_str, (filter_bizname, p_start_ts, p_end_ts))
-
-        # 按照id处理并转换为df
-        print('查询到记录条数:', cursor_sent.rowcount)
-
-        # cursor_sent.close()
-
-        return cursor_sent.rowcount, pd.DataFrame(cursor_sent)
-
-    # 先从article总表中查找,和infodate匹配后插入交易日期
-    def select_infodate():
-        # 创建游标
-        cursor_sent = cnx.cursor(buffered=True)
-
-        # 查询id和用于计算的值
-        query_str = (
-            "SELECT nature_date,nature_datetime_ts,day_tradedate,night_tradedate "
-            "FROM info_date "
-            "WHERE date_ts BETWEEN %s AND %s "
-        )
-
-        # date类型转ts
-        p_start_ts, p_end_ts = date_to_ts(filter_date[0]), date_to_ts(filter_date[1])
-        # 执行查询语句
-        cursor_sent.execute(query_str, (p_start_ts, p_end_ts))
-
-        # 按照id处理并转换为df
-        print('查询到记录条数:', cursor_sent.rowcount)
-
-        # cursor_sent.close()
-
-        return cursor_sent.rowcount, pd.DataFrame(cursor_sent)
-
-    # 开始匹配
-    def map_date(df_article, df_info):
-        # 重命名
-        df_article.rename(columns={0: 'id', 1: 'datetime_ts'}, inplace=True)
-        df_info.rename(columns={0: 'date', 1: 'datetime_ts'}, inplace=True)
-
-        # 从df_article的ts中提取date
-        df_article['date'] = df_article[['datetime_ts', ]].apply(
-            lambda x: datetime.fromtimestamp(x['datetime_ts']).date(),
-            axis=1)
-
-        # join,左表为df_article,用date匹配
-        df_con = pd.merge(df_article, df_info, how='left', on=['date'])
-
-        # 匹配以后进行计算
-        df_con['article_to_tdate'] = df_con[['datetime_ts_x', 'datetime_ts_y', 2, 3]].apply(
-            lambda x: x[2] if x['datetime_ts_x'] <= x['datetime_ts_y'] else x[3], axis=1)
-
-        # df_con.to_csv('test.csv')
-        # 转换为ts方便入库
-        # 空的日期是因为info_date的交易日期最后一行滞后了
-        df_con.dropna(inplace=True)
-        # 有空的日期转换不了timestamp,加了一个判断
-        df_con['t_date'] = df_con[['article_to_tdate', ]].apply(
-            lambda x: pd.to_datetime(x['article_to_tdate']).timestamp(), axis=1)
-
-        # 如果需要检查的时候查看返回值
-        # df_con.to_csv('test.csv')
-
-        # 存储结果 筛选一下,换了位置方便数据库插入
-        df_con = df_con[['t_date', 'id']]
-        return df_con
-
-    # 把匹配后的文章交易日期存储到数据库
-    def update_to_article(df):
-        # 转成元组方便mysql插入
-        merge_result_tuples = [tuple(xi) for xi in df.values]
-        # print(merge_result_tuples)
-
-        # 更新语句 按照id更新
-        update_old = (
-            "UPDATE articles SET t_date = %s "
-            "WHERE id = %s ")
-
-        cur_sent = cnx.cursor(buffered=True)
-        try:
-            cur_sent.executemany(update_old, merge_result_tuples)
-            cnx.commit()
-        except mysql.connector.Error as err:
-            print(err)
-        finally:
-            cur_sent.close()
-
-    cnx = conn_to_db()
-    # 先创建
-    # create_info_date()
-
-    # 分别在2张表中查询并返回查询结果
-    count_article, df_article = select_article()
-    count_infodate, df_infodate = select_infodate()
-    if count_article == 0 or count_infodate == 0:
-        cnx.close()
-        return
-
-    # 匹配好以后返回到articl表
-    update_to_article(map_date(df_article, df_infodate))
-
-    cnx.close()
-
-
 # 获取所有的公众号列表
 def select_from_gzhs():
     # 建立数据库连接
@@ -991,64 +587,6 @@ def select_from_gzhs():
     # 关闭游标和连接
     cnx.close()
     return cursor_query
-
-
-# 获取金融数据
-#
-def get_financial_data():
-    def get_from_tu(ts_code):
-        # 获取K线数据的日期
-        tu = tushare_api.TuShareGet('20120101', '20220601')
-        # 获取的指数
-        df_kline = pd.DataFrame(tu.get_index(ts_code))
-        # 转换为dt方便计算
-        df_kline['date_ts'] = df_kline[['trade_date', ]].apply(
-            lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').timestamp(),
-            axis=1)
-        # 排序以填充
-        df = df_kline.sort_values(by='date_ts')
-        # 筛选需要的行
-        return df
-
-    def create_table(table_name):
-        create_sql = (
-                "CREATE TABLE IF NOT EXISTS  " + table_name +
-                " (`date_ts` int NOT NULL,`ts_code` varchar(40),`trade_date` varchar(40),"
-                "`close` float,`open` float,`high` float,`low` float,`pre_close` float,`change` float,"
-                "`pct_chg` float,`vol` float,`amount` float,"
-                "PRIMARY KEY (`date_ts`),"
-                "KEY `ix_date` (`date_ts`) USING BTREE)"
-        )
-        cur_create = cnx.cursor()
-        cur_create.execute(create_sql)
-
-    # 存储数据到mysql
-    def insert_into_fintable(df, table_name):
-        # 转成元组方便mysql插入
-        result_tuples = [tuple(xi) for xi in df.values]
-        # 更新语句 按照id更新
-        insert_infodate = (
-                "INSERT IGNORE INTO  " + table_name +
-                " (ts_code,trade_date,`close`,`open`,high,low,pre_close,`change`,pct_chg,vol,amount, date_ts) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ")
-        cur_sent = cnx.cursor(buffered=True)
-        try:
-            cur_sent.executemany(insert_infodate, result_tuples)
-            cnx.commit()
-        except mysql.connector.Error as err:
-            print(err)
-        finally:
-            cur_sent.close()
-
-    cnx = conn_to_db()
-
-    index_list = ['399300.SZ', '000001.SH']
-    for code in index_list:
-        df = get_from_tu(code)
-        create_table('`' + code + '`')
-        insert_into_fintable(df, '`' + code + '`')
-
-    cnx.close()
 
 
 # 后面需要计算的字段在这里添加
@@ -1268,6 +806,7 @@ def get_var_reg(filter_biz, filter_date):
 
 
 if __name__ == '__main__':
+    pass
     # init_settings()
     # transfer_learning(1)
     # load_and_predict('twitter_tl_500.h5')
@@ -1289,11 +828,10 @@ if __name__ == '__main__':
     # 计算
     # 不在数据库中计算,在外部计算,方便修改函数
     # 原型成熟了可以用函数计算
-    # get_financial_data()
     # merge_article_img('MjM5NDEzMTAwMA==', [date(2021, 6, 1), date(2022, 6, 1)])
     # cal_other_columns()
     # get_var_reg('MjM5NDEzMTAwMA==', [date(2021, 6, 1), date(2022, 6, 1)])
-    map_articles_tdate('MjM5NDEzMTAwMA==', [date(2021, 6, 1), date(2022, 6, 1)])
+    # map_articles_tdate('MjM5NDEzMTAwMA==', [date(2021, 6, 1), date(2022, 6, 1)])
     # gzhs_list = select_from_gzhs()
     # for biz in gzhs_list:
     #     print('正在分析:', biz[0])
