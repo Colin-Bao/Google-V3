@@ -73,6 +73,7 @@ def update_table(data_tup):
     cnx.close()
 
 
+# 本py的控制类
 def start_cal():
     res_tuple = cal_return(select_fin_table())
     # 更新计算好的数据
