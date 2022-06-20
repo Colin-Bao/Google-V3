@@ -65,7 +65,7 @@ def select_table(table_name: str, select_column: list, filter_dict: dict = None)
         if select_column == ['*']:
             return '*'
         else:
-            # colum_str
+            # colum_strs
             colum_str = ['`' + i + '`' for i in select_column]
             colum_str = ','.join(colum_str)
 
