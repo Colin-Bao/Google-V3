@@ -105,41 +105,41 @@ def update_table(table_name: str, df_values):
         import pandas as pd
         df = pd.DataFrame(df_values)
 
-        # column_str
-        column_str = ['`' + i + '`' for i in df.columns]
-        column_str = '(' + ','.join(column_str) + ')'
+        # update_str
+        update_str = ['`' + i + '`' + '=%s' for i in df.columns]
+        # 切分where
+        where_str = update_str[-1:]
+        where_str = ','.join(where_str)
 
-        # values_str
-        values_str = ['%s' for i in range(len(df.columns))]
-        values_str = '(' + ','.join(values_str) + ')'
+        update_str = update_str[:-1]
+        update_str = ','.join(update_str)
 
         # tup_values
         values_tup = tools.df_to_tup(df)
 
-        return column_str, values_str, values_tup
+        # 默认最后一列为where列
 
-    def execute_many():
+        return update_str, where_str, values_tup
+
+    def execute():
         # 获取要插入的数据
-        tups = ()
+        update_str, where_str, tups = transform_df()
+
         # 创建sql语句
         sql = ("UPDATE " + '`' + table_name + '` ' +
-               "SET log_return = %s,log_return_2 = %s "
-               "WHERE date_ts = %s ")
-
+               "SET " + update_str + " " +
+               "WHERE " + where_str)
+        # print(sql)
         # 执行
-        cnx = tools.conn_to_db()
-        cur = cnx.cursor(buffered=True)
-        cur.executemany(sql, tups)
-        cnx.commit()
-        cnx.close()
+        excute_sql(sql, tups)
 
-    execute_many()
+    execute()
 
 
 if __name__ == '__main__':
     create_table('testtable', {'test1': 'VARCHAR(25)', 'test2': 'VARCHAR(25)', 'PRIMARY KEY': 'test2'})
 
-    data = {'test2': ['aaaa', 'sasa', 'sadsa']
+    data = {'test1': ['aaaab', 'saskkk', 'sadsa'], 'test2': ['1', '2', '3']
             }
-
-    insert_table('testtable', data)
+    # insert_table('testtable', data)
+    update_table('testtable', data)
