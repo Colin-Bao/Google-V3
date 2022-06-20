@@ -5,7 +5,20 @@
 # @Author    :Colin
 # @Note      :None
 
-from my_tools import tools
+
+# 转换df为元组
+def df_to_tup(df):
+    return [tuple(xi) for xi in df.values]
+
+
+# 重命名sql查询的df
+def query_to_df(cursor_query):
+    import pandas as pd
+    # 转换为df重命名并返回
+    dict_columns = {i: cursor_query.column_names[i] for i in range(len(cursor_query.column_names))}
+    df_cur = pd.DataFrame(cursor_query)
+    df_cur.rename(columns=dict_columns, inplace=True)
+    return df_cur
 
 
 # 通用的执行语句
@@ -26,7 +39,7 @@ def excute_sql(sql, tups=None):
             # 查询sql
             cur.execute(sql)
 
-            return tools.query_to_df(cur)
+            return query_to_df(cur)
     except mysql.connector.Error as e:
         print(e)
     finally:
@@ -43,6 +56,48 @@ def select_columns(table_name: str):
         return excute_sql(sql)['COLUMN_NAME']
 
     return excute().tolist()
+
+
+# 按照表格名查找数据
+#
+def select_table(table_name: str, select_column: list, filter_dict: dict = None):
+    def transform_list():
+        if select_column == ['*']:
+            return '*'
+        else:
+            # colum_str
+            colum_str = ['`' + i + '`' for i in select_column]
+            colum_str = ','.join(colum_str)
+
+        filter_str = filter_dict
+        if filter_dict is not None:
+            filter_str_1 = ['`' + i + '`' + ' = ' + j for i, j in filter_dict.items() if
+                            j not in ['NULL', 'NOT NULL'] and not isinstance(j, list)]
+
+            filter_str_2 = ['`' + i + '`' + ' is ' + j for i, j in filter_dict.items() if
+                            j in ['NULL', 'NOT NULL'] and not isinstance(j, list)]
+
+            filter_str_3 = ['`' + i + '`' + ' BETWEEN ' + j[0] + ' AND ' + j[1] for i, j in filter_dict.items() if
+                            isinstance(j, list) and len(j) == 2]
+
+            filter_str = filter_str_1 + filter_str_2 + filter_str_3
+            filter_str = ' AND '.join(filter_str)
+
+        return colum_str, filter_str
+
+    def excute():
+        columns, filter_column = transform_list()
+        sql = (
+            "SELECT {0} FROM {1}".format(columns, '`' + table_name + '`')
+
+        )
+        if filter_column:
+            sql += (" WHERE {0} ".format(filter_column))
+
+        # print(sql)
+        return excute_sql(sql)
+
+    return excute()
 
 
 # 增加表格的字段
@@ -124,7 +179,7 @@ def insert_table(table_name: str, df_values):
         values_str = '(' + ','.join(values_str) + ')'
 
         # tup_values
-        values_tup = tools.df_to_tup(df)
+        values_tup = df_to_tup(df)
 
         return column_str, values_str, values_tup
 
@@ -163,7 +218,7 @@ def update_table(table_name: str, df_values):
         update_str = ','.join(update_str)
 
         # tup_values
-        values_tup = tools.df_to_tup(df)
+        values_tup = df_to_tup(df)
 
         # 默认最后一列为where列
 
@@ -191,8 +246,11 @@ if __name__ == '__main__':
     #         }
     # insert_table('testtable2', data)
 
-    data = {'test1111': ['111', '222', '333'], 'test1': ['1', '2', '3']
-            }
-    update_table('testtable2', data)
+    # data = {'test1111': ['111', '222', '333'], 'test1': ['1', '2', '3']
+    #         }
+    # update_table('testtable2', data)
     # print(select_columns('testtable2'))
     # alter_table('testtable2', ['testfloat', ])
+    res = select_table('testtable2', ['test1111', 'testfloat'],
+                       {'test4': 'NULL', })
+    print(res)
