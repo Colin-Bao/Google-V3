@@ -7,12 +7,15 @@
 
 
 # 转换df为元组
+import pandas as pd
+
+
 def df_to_tup(df):
     return [tuple(xi) for xi in df.values]
 
 
 # 重命名sql查询的df
-def query_to_df(cursor_query):
+def query_to_df(cursor_query) -> pd.DataFrame:
     import pandas as pd
     # 转换为df重命名并返回
     dict_columns = {i: cursor_query.column_names[i] for i in range(len(cursor_query.column_names))}
@@ -48,7 +51,7 @@ def excute_sql(sql, tups=None):
 
 
 # 查询表格所有字段并返回
-def select_columns(table_name: str):
+def select_columns(table_name: str) -> list:
     def excute():
         sql = (
             "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE table_name = {0}".format('\'' + table_name + '\'')
@@ -60,7 +63,7 @@ def select_columns(table_name: str):
 
 # 按照表格名查找数据
 #
-def select_table(table_name: str, select_column: list, filter_dict: dict = None):
+def select_table(table_name: str, select_column: list, filter_dict: dict = None) -> pd.DataFrame:
     def transform_list():
         if select_column == ['*']:
             return '*'
@@ -162,7 +165,7 @@ def create_table(table_name: str, column_dict: dict):
 
 
 # 需要传入df
-def insert_table(table_name: str, df_values):
+def insert_table(table_name: str, df_values: pd.DataFrame):
     # 转换插入的df
     def transform_df():
         import pandas as pd
@@ -199,7 +202,7 @@ def insert_table(table_name: str, df_values):
 
 
 # 需要传入df
-def update_table(table_name: str, df_values):
+def update_table(table_name: str, df_values: pd.DataFrame):
     # 转换插入的df
     def transform_df():
         import pandas as pd
@@ -239,18 +242,23 @@ def update_table(table_name: str, df_values):
     execute()
 
 
-if __name__ == '__main__':
-    # create_table('testtable2', {'test1': 'VARCHAR(25)', 'test2': 'VARCHAR(25)', 'PK': 'test1'})
-    #
-    # data = {'test1': ['21', '21', '21'], 'test1111': ['1', '2', '3']
-    #         }
-    # insert_table('testtable2', data)
-
-    # data = {'test1111': ['111', '222', '333'], 'test1': ['1', '2', '3']
-    #         }
-    # update_table('testtable2', data)
-    # print(select_columns('testtable2'))
-    # alter_table('testtable2', ['testfloat', ])
+def test_demo():
+    """
+    :return:用于测试
+    :note:
+    """
     res = select_table('testtable2', ['test1111', 'testfloat'],
                        {'test4': 'NULL', })
     print(res)
+
+# create_table('testtable2', {'test1': 'VARCHAR(25)', 'test2': 'VARCHAR(25)', 'PK': 'test1'})
+#
+# data = {'test1': ['21', '21', '21'], 'test1111': ['1', '2', '3']
+#         }
+# insert_table('testtable2', data)
+
+# data = {'test1111': ['111', '222', '333'], 'test1': ['1', '2', '3']
+#         }
+# update_table('testtable2', data)
+# print(select_columns('testtable2'))
+# alter_table('testtable2', ['testfloat', ])
