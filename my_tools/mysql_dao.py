@@ -10,6 +10,8 @@
 #
 import pandas as pd
 
+from my_tools import global_vars as gv
+
 
 def df_to_tup(df):
     return [tuple(xi) for xi in df.values]
@@ -65,7 +67,8 @@ def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
     except mysql.connector.Error as e:
         logging.error(e)
     finally:
-        print("[------------执行SQL ----> 记录条数:{1}------------]\n{0}\n".format(str(cur.statement), str(cur.rowcount)))
+        if gv.DEBUG_MODE:
+            print("[------------执行SQL ----> 记录条数:{1}------------]\n{0}\n".format(str(cur.statement), str(cur.rowcount)))
 
         cur.close()
         cnx.close()

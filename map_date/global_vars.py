@@ -18,5 +18,5 @@ INFO_TABLE_SELECT = ['date_ts', 'nature_datetime_ts', 'day_tradedate', 'night_tr
 # ARTICLE
 ARTICLE_TABLE = 'articles'
 ARTICLE_TABLE_SELECT = ['id', 'p_date']
-ARTICLE_TABLE_FILTER = {'p_date_date': 'NULL', 'p_date': 'NOT NULL'}
-ARTICLE_TABLE_UPDATE = ['t_date', 't_date_date']
+ARTICLE_TABLE_FILTER = {'date_ts': 'NULL', 'p_date': 'NOT NULL'}
+ARTICLE_TABLE_UPDATE = ['t_date', 'date_ts', 'id']

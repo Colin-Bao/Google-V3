@@ -32,7 +32,7 @@ def select_article():
     query_str = (
         "SELECT articles.id,articles.p_date "
         "FROM articles "
-        "WHERE articles.p_date_date IS NULL AND "
+        "WHERE articles.date_ts IS NULL AND "
         "articles.p_date IS NOT NULL "
         "ORDER BY articles.p_date ASC "
     )
@@ -116,8 +116,7 @@ def join_date_df(df_article: pd.DataFrame, df_info: pd.DataFrame) -> pd.DataFram
     # 如果需要检查的时候查看返回值
 
     # 存储结果 筛选一下,换了位置方便数据库插入
-
-    return df_con[['t_date', 'date_ts', 'id']]
+    return df_con[gv.ARTICLE_TABLE_UPDATE]
 
 
 # 开始匹配
@@ -160,6 +159,7 @@ def join_map_date(df_article, df_info):
 
     # 如果需要检查的时候查看返回值
     # df_con.to_csv('test.csv')
+    print(df_con.columns)
 
     # 存储结果 筛选一下,换了位置方便数据库插入
     df_con = df_con[['t_date', 'date_ts', 'id']]
@@ -167,7 +167,7 @@ def join_map_date(df_article, df_info):
 
 
 def update_article_table(df: pd.DataFrame):
-    mysql_dao.update_table(gv.ARTICLE_TABLE, df, gv.ARTICLE_TABLE_UPDATE)
+    mysql_dao.update_table(gv.ARTICLE_TABLE, df)
 
 
 # 把匹配后的文章交易日期存储到数据库
@@ -203,4 +203,5 @@ def start_map_tdate_old():
 
 def start_map_tdate():
     df_con = join_date_df(select_article_table(), select_info_table())
+
     update_article_table(df_con)
