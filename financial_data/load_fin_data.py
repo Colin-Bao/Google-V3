@@ -80,12 +80,11 @@ def old_start_download():
 
 # 下载数据并存入数据库
 def start_download():
-    from my_tools import mysql_dao
+    #
     index_list = ['399300.SZ', '000001.SH']
+    attr_dict = {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'trade_date': 'INT'}
+
+    from my_tools import mysql_dao
     for code in index_list:
         df = get_from_tu(code)
-        mysql_dao.insert_table(code, df,
-                               {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'trade_date': 'INT'})
-
-
-start_download()
+        mysql_dao.insert_table(code, df, attr_dict)

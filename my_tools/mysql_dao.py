@@ -16,7 +16,7 @@ def df_to_tup(df):
 
 
 # 获得所有表名
-def select_tables():
+def show_tables():
     def excute():
         sql = (
             "SHOW TABLES"
@@ -28,7 +28,6 @@ def select_tables():
 
 # 重命名sql查询的df
 def query_to_df(cursor_query) -> pd.DataFrame:
-    import pandas as pd
     # 转换为df重命名并返回
     dict_columns = {i: cursor_query.column_names[i] for i in range(len(cursor_query.column_names))}
     df_cur = pd.DataFrame(cursor_query)
@@ -85,7 +84,7 @@ def select_columns(table_name: str) -> list:
 def select_table(table_name: str, select_column: list, filter_dict: dict = None) -> pd.DataFrame:
     def transform_list():
         if select_column == ['*']:
-            return '*'
+            colum_str = '*'
         else:
             # colum_strs
             colum_str = ['`' + i + '`' for i in select_column]
@@ -124,25 +123,51 @@ def select_table(table_name: str, select_column: list, filter_dict: dict = None)
 
 # 增加表格的字段
 # 传入字段列表,默认为VARCHAR
-def alter_table(table_name: str, column_list: list):
-    # 解析column_dict
-    def transform_dict():
+def alter_table(table_name: str, column_list: list, type_dict: dict = None):
+    # 解析自定义的新增类型
+    def add_update_dict(column):
+
+        # 从列名创建对应类型的字典
+        column_dict = {i: 'VARCHAR(255)' for i in column}
+
+        # 如果有自定义的字典
+        if type_dict is not None:
+            # 只更新那些column有的键值对
+            new_dict = {i: j for i, j in type_dict.items() if i in column}
+            column_dict.update(new_dict)
+
+        colunm_list = ['ADD COLUMN ' + '`' + i + '`' + ' ' + j for i, j in column_dict.items()]
+        colunm_list = ','.join(colunm_list)
+
+        return colunm_list
+
+    # 解析column_list
+    def transform_column_list():
         # 已经有的更新
         column_old = select_columns(table_name)
-        column_new = [i for i in column_list if i not in column_old]
 
-        #
-        if column_new is not None:
-            # 生成sql
-            colunm_list = ['ADD COLUMN ' + '`' + i + '`' + ' ' + 'VARCHAR(255)' for i in column_new]
-            colunm_list = ','.join(colunm_list)
-            return colunm_list
+        # 如果查到了
+        if column_old is not None:
+
+            # 遍历出新增的字段
+            column_new = [i for i in column_list if i not in column_old]
+
+            # 如果有新的字段
+            if column_new is not None:
+                # 更新自定义增加的字段类型
+                # 生成sql
+                colunm_update = add_update_dict(column_new)
+
+                return colunm_update
+            else:
+                return None
+
         else:
             return None
 
     #
     def excute():
-        add_column = transform_dict()
+        add_column = transform_column_list()
         # 如果该列不存在默认增加VARCHAR
         if add_column:
             sql = ("ALTER TABLE {0}".format('`' + table_name + '`' + ' ') +
@@ -151,6 +176,29 @@ def alter_table(table_name: str, column_list: list):
             excute_sql(sql)
 
     excute()
+
+
+# 检查完整性和修复
+def check_repair(check_table: str, check_column: list, type_dict: dict = None):
+    def repair_attr():
+        # 如果没有该collumn则创建一个
+        alter_table(check_table, check_column, type_dict)
+
+    def repair_table():
+        table_list = show_tables()
+        # 如果没有这个Table就创建一个
+        if check_table not in table_list:
+            column_dict = {i: 'FLOAT' for i in check_column}
+            if type_dict is not None:
+                column_dict.update(type_dict)
+            create_table(check_table, column_dict)
+
+        # 如果有这个Table就创建新的字段
+        else:
+            # 修复字段完整性
+            repair_attr()
+
+    repair_table()
 
 
 # 创建一个表格,传入表格名与字段名和类型,主键
@@ -189,27 +237,9 @@ def create_table(table_name: str, column_dict: dict):
 
 
 # 需要传入df
-def insert_table(table_name: str, df_values: pd.DataFrame, update_dict: dict = None):
-    # 检查Table是否存在
-    def check_table():
-        table_list = select_tables()
-        # 如果没有这个Table就创建一个
-        if table_name not in table_list:
-            column_dict = {i: 'FLOAT' for i in df_values.columns}
-            if update_dict is not None:
-                column_dict.update(update_dict)
-            create_table(table_name, column_dict)
-        else:
-            check_attr()
-
-    # 检查字段完整性
-    def check_attr():
-        # 如果没有该collumn则创建一个
-        alter_table(table_name, df_values.columns.tolist())
-
+def insert_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = None):
     # 转换插入的df
     def transform_df():
-        import pandas as pd
         df = pd.DataFrame(df_values)
 
         # column_str
@@ -237,19 +267,15 @@ def insert_table(table_name: str, df_values: pd.DataFrame, update_dict: dict = N
         # 执行sql语句
         excute_sql(sql, tups)
 
-    check_table()
+    check_repair(table_name, df_values.columns.tolist(), type_dict)
     execute()
 
 
 # 需要传入df
-def update_table(table_name: str, df_values: pd.DataFrame):
+def update_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = None):
     # 转换插入的df
     def transform_df():
-        import pandas as pd
         df = pd.DataFrame(df_values)
-
-        # 如果没有该collumn则创建一个
-        alter_table(table_name, df.columns.tolist())
 
         # update_str
         update_str = ['`' + i + '`' + '=%s' for i in df.columns]
@@ -279,6 +305,7 @@ def update_table(table_name: str, df_values: pd.DataFrame):
         # 执行
         excute_sql(sql, tups)
 
+    check_repair(table_name, df_values.columns.tolist(), type_dict)
     execute()
 
 
@@ -298,6 +325,7 @@ def test_demo():
 
     # update_table('test1', )
 
+
 # test_demo()
 # create_table('testtable2', {'test1': 'VARCHAR(25)', 'test2': 'VARCHAR(25)', 'PK': 'test1'})
 #
@@ -310,3 +338,6 @@ def test_demo():
 # update_table('testtable2', data)
 # print(select_columns('testtable2'))
 # alter_table('testtable2', ['testfloat', ])
+
+def test_add():
+    alter_table('000001.SH', ['eee1', 'eee2', 'eee3'], {'eee1': 'FLOAT', 'eee2': 'FLOAT', 'eee3': 'FLOAT', })

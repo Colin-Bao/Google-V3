@@ -58,7 +58,7 @@ def cal_return(df):
     # 全部转为str方便插入
     df = df.astype(str)
 
-    return [tuple(xi) for xi in df.values]
+    return df
 
 
 # 更新计算好的数据
@@ -74,7 +74,13 @@ def update_table(data_tup):
 
 
 # 本py的控制类
-def start_cal():
+def old_start_cal():
     res_tuple = cal_return(select_fin_table())
     # 更新计算好的数据
     update_table(res_tuple)
+
+
+def start_cal():
+    from my_tools import mysql_dao
+    df = cal_return(mysql_dao.select_table('000001.SH', ['*']))
+    mysql_dao.update_table('000001.SH', df, {'log_return': 'FLOAT', 'log_return_2': 'FLOAT'})
