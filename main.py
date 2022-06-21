@@ -27,7 +27,7 @@ def run_map_date():
 def run_fin_data():
     print('5.5下载和计算金融市场数据')
     # 建表
-    from financial_data import download_financial_data
+    from financial_data import load_fin_data
     download_financial_data.start_download()
     from financial_data import cal_fin_data
     cal_fin_data.start_cal()

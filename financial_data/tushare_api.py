@@ -4,7 +4,7 @@ import tushare as ts
 # 用于给其他文件调用的类
 
 class TuShareGet:
-    __TOKEN = '7360c0f27e081aa729c1c091784e0df332db69e46fe204bd6e39387c'
+    __TOKEN = '99dec24a97c268cac40c0761443d2ceaa2ae4089949c65d61630b3fe'
     ts_code = None
     start_date = None
     end_date = None
@@ -48,3 +48,9 @@ class TuShareGet:
 
     def get_index(self, code):
         return self.pro.index_daily(ts_code=code, start_date=self.start_date, end_date=self.end_date)
+
+    def get_opt(self, code):
+        return self.pro.opt_daily(ts_code=code, start_date=self.start_date, end_date=self.end_date)
+
+    def get_opt_basic(self):
+        return self.pro.opt_basic(exchange='DCE', fields='ts_code,name,exercise_type,list_date,delist_date')

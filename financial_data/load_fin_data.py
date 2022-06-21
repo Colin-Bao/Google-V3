@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :download_financial_data.py
+# @FileName  :load_fin_data.py
 # @Time      :2022/6/16 20:10
 # @Author    :Colin
 # @Note      :None
@@ -70,9 +70,22 @@ def insert_into_fintable(df, table_name):
     cnx.close()
 
 
-def start_download():
+def old_start_download():
     index_list = ['399300.SZ', '000001.SH']
     for code in index_list:
         df = get_from_tu(code)
         create_table('`' + code + '`')
         insert_into_fintable(df, '`' + code + '`')
+
+
+# 下载数据并存入数据库
+def start_download():
+    from my_tools import mysql_dao
+    index_list = ['399300.SZ', '000001.SH']
+    for code in index_list:
+        df = get_from_tu(code)
+        mysql_dao.insert_table(code, df,
+                               {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'trade_date': 'INT'})
+
+
+start_download()
