@@ -45,10 +45,14 @@ def down_from_url(biz_name, artical_name, img_url):
     try:
         r = requests.get(img_url, stream=True)
         if r.status_code == 200:
-            local_path = 'cover_imgs/' + str(biz_name) + '/' + str(
+            # 相对路径
+            local_path_save = gv.LOCAL_COVER_PATH + str(biz_name) + '/' + str(
                 artical_name) + '.jpg'
-            open(local_path, 'wb').write(r.content)  # 将内容写入图片
-            return local_path
+            # 绝对路径
+            local_path_read = gv.LOCAL_ROOT_PATH + local_path_save
+
+            open(local_path_read, 'wb').write(r.content)  # 将内容写入图片
+            return local_path_save
         else:
             return None
 
@@ -71,7 +75,7 @@ def down_img_url(filter_biz, filter_date):
 
     # INSERT IGNORE INTO
     def insert_article_img(i_biz, i_id, i_mov):
-        local_cover = 'cover_imgs/' + str(i_biz) + '/' + str(i_id) + '.jpg'
+        local_cover = gv.LOCAL_ROOT_PATH + gv.LOCAL_COVER_PATH + str(i_biz) + '/' + str(i_id) + '.jpg'
         insert_sql = (
             "INSERT IGNORE INTO article_imgs"
             " (id,local_cover,mov) "
@@ -162,10 +166,12 @@ def save_insert_img(biz_name, start_ts, end_ts):
     df = mysql_dao.excute_sql(left_join_query, 'one', (biz_name, start_ts, end_ts))
     if not df.empty:
         def my_function(x: pd.Series):
+            # 先保存
             df_x = pd.DataFrame.transpose(
                 pd.concat([x[['id', 'mov']],
                            pd.Series({"local_cover": down_from_url(x['biz'], x['id'],
                                                                    x['cover'])})]).to_frame())
+            # 再插入数据库
             mysql_dao.insert_table('article_imgs', df_x, check_flag=False)
             # return df_x
 

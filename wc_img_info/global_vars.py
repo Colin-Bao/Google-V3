@@ -5,6 +5,8 @@
 # @Author    :Colin
 # @Note      :None
 
+LOCAL_ROOT_PATH = '/Users/mac/PycharmProjects/Google-V3/wc_img_info/'
+LOCAL_COVER_PATH = 'cover_imgs/'
 
 START_TS = '1621000000'
 END_TS = '1654012800'

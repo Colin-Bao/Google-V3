@@ -275,6 +275,3 @@ def start_group():
         )
         ,
         axis=1)
-
-
-start_group()

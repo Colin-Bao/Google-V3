@@ -19,11 +19,17 @@ def conn_to_db():
                                    database='wechat_offacc')
 
 
-def get_from_tu(ts_code):
+def get_from_tu(ts_code) -> pd.DataFrame:
     # 获取K线数据的日期
     tu = tushare_api.TuShareGet('20120101', '20220601')
     # 获取的指数
-    df_kline = pd.DataFrame(tu.get_index(ts_code))
+    try:
+        df_kline = pd.DataFrame(tu.get_index(ts_code))
+    except Exception as e:
+        import logging
+        logging.error(e)
+        return pd.DataFrame()
+
     # 转换为dt方便计算
     df_kline['date_ts'] = df_kline[['trade_date', ]].apply(
         lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').date(),

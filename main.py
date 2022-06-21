@@ -35,7 +35,7 @@ def run_fin_data():
 def run_group_date():
     print('6.每家公众号按照日期聚合article,并计算聚合后的指标')
     from group_date import group_gzh_imgs
-    group_gzh_imgs.start_group_by_date()
+    group_gzh_imgs.start_group()
 
 
 # 7.合并聚合后的group与金融市场数据
