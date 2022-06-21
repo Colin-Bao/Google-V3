@@ -15,8 +15,10 @@ from keras.applications.inception_v3 import preprocess_input
 from keras.models import load_model
 from keras.preprocessing import image
 
-
 # 获取数据库连接
+import my_tools.mysql_dao
+
+
 def conn_to_db():
     return mysql.connector.connect(user='root', password='',
                                    host='127.0.0.1',
@@ -29,7 +31,8 @@ def filepath_to_img(df_img):
     img_path_list = []
     for i in range(len(df_img)):
         try:
-            images = image.load_img(df_img[i], target_size=(299, 299))
+            images = image.load_img('/Users/mac/PycharmProjects/Google-V3/wc_img_info/' + df_img[i],
+                                    target_size=(299, 299))
             x = image.img_to_array(images)
             x = np.expand_dims(x, axis=0)
             x = preprocess_input(x)
@@ -57,25 +60,34 @@ def predict_img_bymodel(x, model_path):
 # 根据返回的图像路径进行情绪计算
 # 传入df_att_img
 # 返回df_att_img+y
-def merge_img_path(df_query):
+def predict_from_path(df_query) -> pd.DataFrame:
     # 图片路径读取成可以预测的格式
     # 第2列是img路径
     x = filepath_to_img(df_query['local_cover'])
 
     # 预测
-    y = predict_img_bymodel(x, 'img_sentiment/twitter_tl_500.h5')
+    y = predict_img_bymodel(x, '/Users/mac/PycharmProjects/Google-V3/img_sentiment/twitter_tl_500.h5')
 
     # 预测结果与原表拼在一起
     #  id path neg pos
     df_c = pd.concat([df_query, y], axis=1)
 
     # 返回新增了neg pos的新df
+    df_c.rename(columns={0: 'cover_neg', 1: 'cover_pos'}, inplace=True)
+    df_c = df_c[['cover_neg', 'cover_pos', 'id']]
     return df_c
+
+
+def select_pic_path(batch_size=512) -> pd.DataFrame:
+    from my_tools import mysql_dao
+    df_limit = mysql_dao.select_table('article_imgs', ['id', 'local_cover'],
+                                      {'local_cover': 'NOT NULL', 'cover_neg': 'NULL', 'LIMIT': batch_size})
+    return df_limit
 
 
 # 查询数据库中存在的文件路径 且不为空的地方
 # 移除了日期筛选,保留了512分片
-def select_pic_path(batch_size):
+def old_select_pic_path(batch_size):
     cnx = conn_to_db()
     cursor_query = cnx.cursor(buffered=True)
     query = ("SELECT id,local_cover FROM article_imgs "
@@ -101,7 +113,7 @@ def select_pic_path(batch_size):
 
 
 # 更新情绪到article_img
-def update_img_table(df_con):
+def old_update_img_table(df_con):
     cnx = conn_to_db()
     # 只要neg pos id
     df_con = df_con[[0, 1, 'id']]
@@ -120,6 +132,11 @@ def update_img_table(df_con):
     cnx.close()
 
 
+def update_img_table(df: pd.DataFrame):
+    from my_tools import mysql_dao
+    mysql_dao.update_table('article_imgs', df)
+
+
 def predict_by_batch(batch_size=512):
     i = batch_size
     while i >= 0:
@@ -129,9 +146,30 @@ def predict_by_batch(batch_size=512):
         if i == 0:
             break
         # 根据路径计算情绪
-        df_sentiment = merge_img_path(df_query)
+        df_sentiment = predict_from_path(df_query)
 
         # 还需要详细的情绪数据,细化的
         # 包括了封面党的位置,颜色,类型标签等数据库,用localurl作为主键和外键
         # 更新情绪数据
         update_img_table(df_sentiment)
+
+
+def start_predict(batch_size=512):
+    i = batch_size
+    while i >= 0:
+        # 获得图像情绪
+        df_query = select_pic_path(batch_size)
+
+        i = df_query.shape[0]
+        if i == 0:
+            break
+        # 根据路径计算情绪
+        df_sentiment = predict_from_path(df_query)
+        update_img_table(df_sentiment)
+
+        # 还需要详细的情绪数据,细化的
+        # 包括了封面党的位置,颜色,类型标签等数据库,用localurl作为主键和外键
+        # 更新情绪数据
+        # update_img_table(df_sentiment)
+
+

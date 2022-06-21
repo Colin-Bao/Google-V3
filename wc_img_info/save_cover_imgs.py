@@ -3,6 +3,8 @@
 """
 import time
 from functools import wraps
+
+import pandas as pd
 import requests
 import mysql.connector
 import os
@@ -40,21 +42,23 @@ def date_to_ts(date_type):
 def down_from_url(biz_name, artical_name, img_url):
     try:
         r = requests.get(img_url, stream=True)
-        open('cover_imgs/' + str(biz_name) + '/' + str(artical_name) + '.jpg', 'wb').write(r.content)  # 将内容写入图片
+        if r.status_code == 200:
+            local_path = 'cover_imgs/' + str(biz_name) + '/' + str(
+                artical_name) + '.jpg'
+            open(local_path, 'wb').write(r.content)  # 将内容写入图片
+            return local_path
+        else:
+            return None
+
     except BaseException as e:
         print(e)
+        return None
 
 
 # 按照公众号顺序下载图片
-def get_gzh_list():
-    # 建立数据库连接
-    cnx = conn_to_db()
-    cursor_query = cnx.cursor(buffered=True)
-    query = "SELECT biz FROM gzhs "
-    cursor_query.execute(query)
-    # 关闭游标和连接
-    cnx.close()
-    return cursor_query
+def get_gzh_list() -> pd.DataFrame:
+    from my_tools import mysql_dao
+    return mysql_dao.select_table('gzhs', ['biz'])
 
 
 @timethis
@@ -135,5 +139,43 @@ def do_save_cover_imgs(gzh_list=None):
             # 在该目录下进行下载
             down_img_url(gzh_biz, [date(2021, 6, 1), date(2022, 6, 1)])
 
+
 # if __name__ == '__main__':
 # do_save_cover_imgs(['MjM5MzMwNjM0MA=='])
+
+
+def save_insert_img(biz_name, start_ts, end_ts):
+    from my_tools import mysql_dao
+    # 合并查询img表中没有本地路径的图片
+    # 不用对应好id,直接把img中没有的id从article从下载
+    # 左表是articles 右表是img
+    left_join_query = ("SELECT articles.biz,articles.id,articles.cover,articles.mov FROM articles "
+                       "LEFT JOIN article_imgs "
+                       "ON articles.id = article_imgs.id "
+                       "WHERE article_imgs.id IS NULL AND "
+                       "articles.biz = %s AND "
+                       "articles.p_date BETWEEN %s AND %s ")
+
+    # 执行cursor_query 按照公众号名称biz查询
+    df = mysql_dao.excute_sql(left_join_query, 'one', (biz_name, start_ts, end_ts))
+    if not df.empty:
+        def my_function(x: pd.Series):
+            df_x = pd.DataFrame.transpose(
+                pd.concat([x[['id', 'mov']],
+                           pd.Series({"local_cover": down_from_url(x['biz'], x['id'],
+                                                                   x['cover'])})]).to_frame())
+            mysql_dao.insert_table('article_imgs', df_x, check_flag=False)
+            # return df_x
+
+        df[['biz', 'id', 'cover', 'mov']].apply(lambda x: my_function(x), axis=1)
+
+    # print(df.columns)
+    # 图片按照文章id命名
+
+
+def start_save_insert():
+    for i in get_gzh_list().values:
+        save_insert_img(i[0], '1621000000', '1654012800')
+
+
+start_save_insert()

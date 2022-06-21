@@ -6,12 +6,9 @@
 # @Note      :None
 
 
-def start_do():
+def start():
     from financial_data import load_fin_data
     load_fin_data.start_download()
 
     from financial_data import cal_fin_data
     cal_fin_data.start_cal()
-
-
-start_do()

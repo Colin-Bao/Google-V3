@@ -28,15 +28,19 @@ def show_tables():
 
 # 重命名sql查询的df
 def query_to_df(cursor_query) -> pd.DataFrame:
-    # 转换为df重命名并返回
-    dict_columns = {i: cursor_query.column_names[i] for i in range(len(cursor_query.column_names))}
-    df_cur = pd.DataFrame(cursor_query)
-    df_cur.rename(columns=dict_columns, inplace=True)
-    return df_cur
+    if cursor_query is not None:
+        # 转换为df重命名并返回
+        dict_columns = {i: cursor_query.column_names[i] for i in range(len(cursor_query.column_names))}
+        df_cur = pd.DataFrame(cursor_query)
+        df_cur.rename(columns=dict_columns, inplace=True)
+        return df_cur
+    else:
+        return pd.DataFrame()
 
 
 # 通用的执行语句
-def excute_sql(sql, tups=None) -> pd.DataFrame:
+def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
+    import logging
     import mysql.connector
     cnx = mysql.connector.connect(user='root', password='',
                                   host='127.0.0.1',
@@ -45,21 +49,24 @@ def excute_sql(sql, tups=None) -> pd.DataFrame:
 
     # 查询以外的sql
     try:
-        if tups is not None:
+        # 插入和更新
+        if method == 'many':
             cur.executemany(sql, tups)
             cnx.commit()
-            print("{0}".format(str(cur.statement[:100])))
+        elif method == 'one':
+            if tups is not None:
+                cur.execute(sql, tups)
+                return query_to_df(cur)
+            else:
+                # 查询sql
+                cur.execute(sql)
+                return query_to_df(cur)
 
-            return cur
-        else:
-            # 查询sql
-            cur.execute(sql)
-            print("{0}".format(str(cur.statement[:100])))
-
-            return query_to_df(cur)
     except mysql.connector.Error as e:
-        print(e)
+        logging.error(e)
     finally:
+        print("[------------执行SQL ----> 记录条数:{1}------------]\n{0}".format(str(cur.statement), str(cur.rowcount)))
+
         cur.close()
         cnx.close()
 
@@ -91,18 +98,26 @@ def select_table(table_name: str, select_column: list, filter_dict: dict = None)
             colum_str = ','.join(colum_str)
 
         filter_str = filter_dict
-        if filter_dict is not None:
-            filter_str_1 = ['`' + i + '`' + ' = ' + j for i, j in filter_dict.items() if
-                            j not in ['NULL', 'NOT NULL'] and not isinstance(j, list)]
 
-            filter_str_2 = ['`' + i + '`' + ' is ' + j for i, j in filter_dict.items() if
-                            j in ['NULL', 'NOT NULL'] and not isinstance(j, list)]
+        if filter_dict is not None:
+            filter_str_1 = ['`' + i + '`' + ' = ' + str(j) for i, j in filter_dict.items() if
+                            j not in ['NULL', 'NOT NULL'] and i != 'LIMIT' and not isinstance(j, list)]
+
+            filter_str_2 = ['`' + i + '`' + ' IS ' + str(j) for i, j in filter_dict.items() if
+                            str(j) in ['NULL', 'NOT NULL'] and not isinstance(j, list)]
 
             filter_str_3 = ['`' + i + '`' + ' BETWEEN ' + j[0] + ' AND ' + j[1] for i, j in filter_dict.items() if
                             isinstance(j, list) and len(j) == 2]
 
             filter_str = filter_str_1 + filter_str_2 + filter_str_3
+
             filter_str = ' AND '.join(filter_str)
+
+            if filter_str != '':
+                filter_str = ' WHERE ' + filter_str
+
+            filter_limit = [' LIMIT ' + str(j) for i, j in filter_dict.items() if i == 'LIMIT']
+            filter_str = filter_str + ''.join(filter_limit)
 
         return colum_str, filter_str
 
@@ -113,7 +128,7 @@ def select_table(table_name: str, select_column: list, filter_dict: dict = None)
 
         )
         if filter_column:
-            sql += (" WHERE {0} ".format(filter_column))
+            sql += filter_column
 
         # print(sql)
         return excute_sql(sql)
@@ -237,7 +252,7 @@ def create_table(table_name: str, column_dict: dict):
 
 
 # 需要传入df
-def insert_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = None):
+def insert_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = None, check_flag=True):
     # 转换插入的df
     def transform_df():
         df = pd.DataFrame(df_values)
@@ -265,9 +280,16 @@ def insert_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = Non
                )
 
         # 执行sql语句
-        excute_sql(sql, tups)
+        excute_sql(sql, 'many', tups)
 
-    check_repair(table_name, df_values.columns.tolist(), type_dict)
+    if df_values.empty:
+        import logging
+        logging.warning('INSERT {0} EMPTY DATAFRAME'.format(table_name))
+        return
+
+    if check_flag:
+        check_repair(table_name, df_values.columns.tolist(), type_dict)
+
     execute()
 
 
@@ -303,8 +325,12 @@ def update_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = Non
                "WHERE " + where_str)
         # print(sql)
         # 执行
-        excute_sql(sql, tups)
+        excute_sql(sql, 'many', tups)
 
+    if df_values.empty:
+        import logging
+        logging.warning('UPDATE {0} EMPTY DATAFRAME'.format(table_name))
+        return
     check_repair(table_name, df_values.columns.tolist(), type_dict)
     execute()
 
@@ -341,3 +367,8 @@ def test_demo():
 
 def test_add():
     alter_table('000001.SH', ['eee1', 'eee2', 'eee3'], {'eee1': 'FLOAT', 'eee2': 'FLOAT', 'eee3': 'FLOAT', })
+
+
+def test_select():
+    df = select_table('test', ['*'], {'id': '002a737b91f464ddcaf6da7c417981b7', 'LIMIT': 10})
+    print(df)

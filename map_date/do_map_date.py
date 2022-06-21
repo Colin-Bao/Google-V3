@@ -6,7 +6,7 @@
 # @Note      :None
 
 
-def run_self():
+def start():
     from map_date import create_info_table, map_article_tdate
     create_info_table.start_create_info()
     map_article_tdate.start_map_tdate()

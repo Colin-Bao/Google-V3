@@ -5,16 +5,10 @@
 # @Author    :Colin
 # @Note      :None
 from datetime import datetime
-
+from my_tools import mysql_dao
+import global_vars as gv
 import mysql.connector
 import pandas as pd
-
-
-# date类型转ts
-def date_to_ts(date_type):
-    dt = datetime.combine(date_type, datetime.min.time())
-    # datetime.fromtimestamp(p_date)
-    return int(dt.timestamp())
 
 
 # 获取数据库连接
@@ -22,6 +16,11 @@ def conn_to_db():
     return mysql.connector.connect(user='root', password='',
                                    host='127.0.0.1',
                                    database='wechat_offacc')
+
+
+# 先从article总表中查找,和infodate匹配后插入交易日期
+def select_article_table() -> pd.DataFrame:
+    return mysql_dao.select_table(gv.ARTICLE_TABLE, gv.ARTICLE_TABLE_SELECT, gv.ARTICLE_TABLE_FILTER)
 
 
 # 先从article总表中查找,和infodate匹配后插入交易日期
@@ -54,6 +53,10 @@ def select_article():
     return cursor_query.rowcount, df_cur
 
 
+def select_info_table() -> pd.DataFrame:
+    return mysql_dao.select_table(gv.INFO_TABLE, gv.INFO_TABLE_SELECT)
+
+
 # 先从article总表中查找,和infodate匹配后插入交易日期
 def select_infodate():
     cnx = conn_to_db()
@@ -78,6 +81,43 @@ def select_infodate():
     cnx.close()
 
     return cursor_query.rowcount, df_cur
+
+
+def join_date_df(df_article: pd.DataFrame, df_info: pd.DataFrame) -> pd.DataFrame:
+    if df_article.empty or df_info.empty:
+        return pd.DataFrame()
+
+        # 从df_article的p_date中提取date
+    df_article['date_ts'] = df_article[['p_date', ]].apply(
+        lambda x: datetime.fromtimestamp(x['p_date']).date(),
+        axis=1)
+    # 转为ts方便匹配
+    df_article['date_ts'] = df_article[['date_ts', ]].apply(
+        lambda x: int(pd.to_datetime(x['date_ts']).timestamp()),
+        axis=1)
+
+    # join,左表为df_article,用date匹配
+    df_con = pd.merge(df_article, df_info, how='left', on=['date_ts'])
+
+    # 匹配以后进行计算
+    df_con['article_to_tdate'] = df_con[['p_date', 'nature_datetime_ts', 'day_tradedate', 'night_tradedate']].apply(
+        lambda x: x['day_tradedate'] if x['p_date'] <= x['nature_datetime_ts'] else x['night_tradedate'], axis=1)
+
+    # 空的日期是因为info_date的交易日期最后一行滞后了
+    df_con.dropna(inplace=True)
+
+    # 转换为ts方便入库
+    df_con['t_date'] = df_con[['article_to_tdate', ]].apply(
+        lambda x: pd.to_datetime(x['article_to_tdate']).date(), axis=1)
+
+    df_con['t_date'] = df_con[['t_date', ]].apply(
+        lambda x: int(pd.to_datetime(x['t_date']).timestamp()), axis=1)
+
+    # 如果需要检查的时候查看返回值
+
+    # 存储结果 筛选一下,换了位置方便数据库插入
+
+    return df_con[['t_date', 'date_ts', 'id']]
 
 
 # 开始匹配
@@ -126,6 +166,10 @@ def join_map_date(df_article, df_info):
     return df_con
 
 
+def update_article_table(df: pd.DataFrame):
+    mysql_dao.update_table(gv.ARTICLE_TABLE, df, gv.ARTICLE_TABLE_UPDATE)
+
+
 # 把匹配后的文章交易日期存储到数据库
 def update_to_article(df):
     cnx = conn_to_db()
@@ -144,7 +188,7 @@ def update_to_article(df):
     cnx.close()
 
 
-def start_map_tdate():
+def start_map_tdate_old():
     # 先创建
     # create_info_date()
     # 分别在2张表中查询并返回查询结果
@@ -155,3 +199,8 @@ def start_map_tdate():
     else:
         # 匹配好以后返回到articl表
         update_to_article(join_map_date(df_article, df_infodate))
+
+
+def start_map_tdate():
+    df_con = join_date_df(select_article_table(), select_info_table())
+    update_article_table(df_con)

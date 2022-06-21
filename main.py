@@ -5,7 +5,7 @@
 def run_wc_img_info():
     print('3.把article的本地封面图片下载到新表article_img')
     from wc_img_info import save_cover_imgs
-    save_cover_imgs.do_save_cover_imgs()
+    save_cover_imgs.start_save_insert()
 
 
 # 4.计算article_img中的图像情绪
@@ -13,24 +13,22 @@ def run_wc_img_info():
 def run_img_sentiment():
     print('4.计算article_img中的图像情绪')
     from img_sentiment import predict_imgsent_fromdb
-    predict_imgsent_fromdb.predict_by_batch(512)
+    predict_imgsent_fromdb.start_predict()
 
 
 # 5.把article的日期映射到交易日期
 def run_map_date():
     print('5.把article的日期映射到交易日期')
     from map_date import do_map_date
-    do_map_date.run_self()
+    do_map_date.start()
 
 
 # 5.5下载和计算金融市场数据
 def run_fin_data():
     print('5.5下载和计算金融市场数据')
     # 建表
-    from financial_data import load_fin_data
-    download_financial_data.start_download()
-    from financial_data import cal_fin_data
-    cal_fin_data.start_cal()
+    from financial_data import do_fin_data
+    do_fin_data.start()
 
 
 # 6.每家公众号按照日期聚合article,并计算聚合后的指标

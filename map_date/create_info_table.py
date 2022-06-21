@@ -5,16 +5,17 @@
 # @Author    :Colin
 # @Note      :None
 import pandas as pd
-from datetime import datetime
+
+
+# 参考的交易日期
+def select_trade_table():
+    from my_tools import mysql_dao
+    import global_vars
+    return mysql_dao.select_table(global_vars.TRADE_TABLE, ['date_ts', 'trade_date'])
 
 
 # 创建表的算法,不小心删了
-def cal_info_df():
-    from financial_data import cal_fin_data
-    df_fin = cal_fin_data.select_fin_table()
-    df_fin = df_fin[['date_ts', 'trade_date']]
-    df_fin.rename(columns={'trade_date': 'day_tradedate'}, inplace=True)
-
+def create_info_df(df_tdate: pd.DataFrame):
     # 生成自然日期
     df_date = pd.DataFrame(pd.date_range(start='1/1/2012', end='6/1/2022'))
     df_date.rename(columns={0: 'nature_date'}, inplace=True)
@@ -36,18 +37,17 @@ def cal_info_df():
         axis=1)
 
     # 匹配
-    df_con = pd.merge(df_date, df_fin, how='left', on=['date_ts'])
-
+    df_con = pd.merge(df_date, df_tdate, how='left', on=['date_ts'])
     # 填充
-    df_con['day_tradedate'].fillna(method='bfill', inplace=True)
+    df_con['day_tradedate'] = df_con['trade_date'].fillna(method='bfill')
     df_con['night_tradedate'] = df_con['day_tradedate'].shift(-1)
 
     # 转换
     df_con['day_tradedate'] = df_con[['day_tradedate', ]].apply(
         lambda x: str(pd.to_datetime(x['day_tradedate']).date()),
         axis=1)
-    df_con['night_tradedate'] = df_con[['day_tradedate', ]].apply(
-        lambda x: str(pd.to_datetime(x['day_tradedate']).date()),
+    df_con['night_tradedate'] = df_con[['night_tradedate', ]].apply(
+        lambda x: str(pd.to_datetime(x['night_tradedate']).date()),
         axis=1)
 
     # 转为字符串
@@ -60,14 +60,18 @@ def cal_info_df():
 
     # 重排列
     df_con = df_con[['nature_date', 'date_ts', 'nature_datetime', 'nature_datetime_ts',
-                     'day_tradedate', 'night_tradedate']]
-
-    df_con.to_csv('test.csv')
+                     'day_tradedate', 'night_tradedate', 'trade_date']]
 
     return df_con
 
 
 def insert_info_table(df):
+    from my_tools import mysql_dao
+    import global_vars
+    mysql_dao.insert_table(global_vars.INFO_TABLE, df, global_vars.INFO_TABLE_COLUMN)
+
+
+def old_insert_info_table(df):
     from my_tools import tools
     cnx = tools.conn_to_db()
     cur = cnx.cursor(buffered=True)
@@ -81,4 +85,13 @@ def insert_info_table(df):
 
 
 def start_create_info():
-    insert_info_table(cal_info_df())
+    insert_info_table(create_info_df(select_trade_table()))
+
+
+def test_c():
+    df = select_trade_table()
+    df_con = create_info_df(df)
+    insert_info_table(df_con)
+
+
+start_create_info()
