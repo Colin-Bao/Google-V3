@@ -21,9 +21,9 @@ def show_tables():
         sql = (
             "SHOW TABLES"
         )
-        return excute_sql(sql).iloc[0]
+        return excute_sql(sql).iloc[:, 0].tolist()
 
-    return excute().tolist()
+    return excute()
 
 
 # 重命名sql查询的df
@@ -65,7 +65,7 @@ def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
     except mysql.connector.Error as e:
         logging.error(e)
     finally:
-        print("[------------执行SQL ----> 记录条数:{1}------------]\n{0}".format(str(cur.statement), str(cur.rowcount)))
+        print("[------------执行SQL ----> 记录条数:{1}------------]\n{0}\n".format(str(cur.statement), str(cur.rowcount)))
 
         cur.close()
         cnx.close()
@@ -202,7 +202,9 @@ def check_repair(check_table: str, check_column: list, type_dict: dict = None):
     def repair_table():
         table_list = show_tables()
         # 如果没有这个Table就创建一个
+
         if check_table not in table_list:
+            print(check_table, table_list)
             column_dict = {i: 'FLOAT' for i in check_column}
             if type_dict is not None:
                 column_dict.update(type_dict)

@@ -9,6 +9,8 @@ import mysql.connector
 import pandas as pd
 from financial_data import tushare_api
 
+from financial_data import global_vars as gv
+
 
 # 获取数据库连接
 def conn_to_db():
@@ -81,10 +83,12 @@ def old_start_download():
 # 下载数据并存入数据库
 def start_download():
     #
-    index_list = ['399300.SZ', '000001.SH']
-    attr_dict = {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'trade_date': 'INT'}
+
+    index_list = gv.INDEX_LIST
+    attr_dict = gv.INDEX_TABLE_COLUMN
 
     from my_tools import mysql_dao
+
     for code in index_list:
         df = get_from_tu(code)
         mysql_dao.insert_table(code, df, attr_dict)

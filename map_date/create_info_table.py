@@ -5,18 +5,20 @@
 # @Author    :Colin
 # @Note      :None
 import pandas as pd
+from map_date import global_vars as gv
 
 
 # 参考的交易日期
 def select_trade_table():
     from my_tools import mysql_dao
-    import global_vars
-    return mysql_dao.select_table(global_vars.TRADE_TABLE, ['date_ts', 'trade_date'])
+    return mysql_dao.select_table(gv.TRADE_TABLE, gv.TRADE_TABLE_SELECT)
 
 
 # 创建表的算法,不小心删了
-def create_info_df(df_tdate: pd.DataFrame):
-    # 生成自然日期
+def create_info_df(df_tdate: pd.DataFrame) -> pd.DataFrame:
+    if df_tdate.empty:
+        return pd.DataFrame()
+        # 生成自然日期
     df_date = pd.DataFrame(pd.date_range(start='1/1/2012', end='6/1/2022'))
     df_date.rename(columns={0: 'nature_date'}, inplace=True)
 
@@ -67,8 +69,7 @@ def create_info_df(df_tdate: pd.DataFrame):
 
 def insert_info_table(df):
     from my_tools import mysql_dao
-    import global_vars
-    mysql_dao.insert_table(global_vars.INFO_TABLE, df, global_vars.INFO_TABLE_COLUMN)
+    mysql_dao.insert_table(gv.INFO_TABLE, df, gv.INFO_TABLE_COLUMN)
 
 
 def old_insert_info_table(df):
@@ -92,6 +93,3 @@ def test_c():
     df = select_trade_table()
     df_con = create_info_df(df)
     insert_info_table(df_con)
-
-
-start_create_info()

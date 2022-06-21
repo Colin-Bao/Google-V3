@@ -6,7 +6,7 @@
 # @Note      :None
 from datetime import datetime
 from my_tools import mysql_dao
-import global_vars as gv
+from map_date import global_vars as gv
 import mysql.connector
 import pandas as pd
 

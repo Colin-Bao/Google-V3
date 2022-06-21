@@ -6,8 +6,8 @@
 # @Note      :None
 
 # TRADE
-TRADE_TABLE = '399300.SH'
-
+TRADE_TABLE = '399300.SZ'
+TRADE_TABLE_SELECT = ['date_ts', 'trade_date']
 # INFO
 INFO_TABLE = 'info_date'
 INFO_TABLE_COLUMN = {'date_ts': 'INT', 'nature_date': 'DATE', 'nature_datetime_ts': 'INT',

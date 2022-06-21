@@ -173,9 +173,6 @@ def save_insert_img(biz_name, start_ts, end_ts):
     # 图片按照文章id命名
 
 
-def start_save_insert():
+def start_download():
     for i in get_gzh_list().values:
         save_insert_img(i[0], '1621000000', '1654012800')
-
-
-start_save_insert()

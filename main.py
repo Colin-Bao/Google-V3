@@ -5,7 +5,7 @@
 def run_wc_img_info():
     print('3.把article的本地封面图片下载到新表article_img')
     from wc_img_info import save_cover_imgs
-    save_cover_imgs.start_save_insert()
+    save_cover_imgs.start_download()
 
 
 # 4.计算article_img中的图像情绪
@@ -59,6 +59,6 @@ if __name__ == '__main__':
     run_fin_data()
 
     # 6.(已测试)每家公众号按照日期聚合article,并计算聚合后的指标,再与金融市场数据连接
-    run_group_date()
+    # run_group_date()
 
-    # 8.在Stata中重新排列时间序列,计算滞后变量回归
+    # 8.在Stata中重新排列时间序列,计算滞后变量回归 .
