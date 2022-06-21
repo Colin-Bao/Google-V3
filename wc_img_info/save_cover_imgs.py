@@ -10,6 +10,8 @@ import mysql.connector
 import os
 from datetime import datetime, date
 
+from wc_img_info import global_vars as gv
+
 
 # 用于计算程序运行时间
 def timethis(func):
@@ -174,5 +176,4 @@ def save_insert_img(biz_name, start_ts, end_ts):
 
 
 def start_download():
-    for i in get_gzh_list().values:
-        save_insert_img(i[0], '1621000000', '1654012800')
+    get_gzh_list()[['biz']].apply(lambda x: save_insert_img(x['biz'], gv.START_TS, gv.END_TS), axis=1)

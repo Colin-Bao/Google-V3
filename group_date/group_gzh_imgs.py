@@ -6,11 +6,18 @@
 # @Note      :None
 
 from datetime import datetime
+from typing import Union, Tuple, Any
+
 import mysql.connector
 import pandas as pd
+from pandas import DataFrame
 
+from group_date import global_vars as gv
 
 # date类型转ts
+from my_tools import mysql_dao
+
+
 def date_to_ts(date_type):
     dt = datetime.combine(date_type, datetime.min.time())
     # datetime.fromtimestamp(p_date)
@@ -22,6 +29,12 @@ def conn_to_db():
     return mysql.connector.connect(user='root', password='',
                                    host='127.0.0.1',
                                    database='wechat_offacc')
+
+
+# 获得公众号列表
+def select_gzh_table():
+    from my_tools import mysql_dao
+    return mysql_dao.select_table(gv.GZH_TABLE, gv.GZH_SELECT)
 
 
 # 获得公众号列表
@@ -79,12 +92,28 @@ def select_article_img(filter_biz):
     return cursor_query.rowcount, df_cur
 
 
+def select_img_table(biz) -> pd.DataFrame:
+    from my_tools import mysql_dao
+
+    # 查询id和用于计算的值
+    query_sql = (
+        "SELECT articles.id,articles.biz,articles.p_date,articles.t_date,article_imgs.mov,article_imgs.cover_neg,article_imgs.cover_pos "
+        "FROM articles INNER JOIN article_imgs on articles.id = article_imgs.id "
+        "WHERE articles.biz = %s AND "
+        "articles.t_date IS NOT NULL "
+        "ORDER BY articles.p_date ASC "
+    )
+    return mysql_dao.excute_sql(query_sql, tups=(biz,))
+
+
 # 分析的是article和text表合并的数据
 # 主要是聚合的运算 概率阈值的选择等
 def group_articleimg_bydate(df, biz, nickname):
-    cnx = conn_to_db()
+    if df.empty:
+        return pd.DataFrame(), pd.DataFrame()
 
     # 一些指标的计算
+
     def cal_colunms():
         # 增加一列用于把ts换成天数(后续可以精确的时间) 前面的中扩繁相当于传入的参数x
         # 这个函数的作用是聚合,因此不需要time
@@ -161,7 +190,6 @@ def group_articleimg_bydate(df, biz, nickname):
     df_g_t = group_articles(column_name='t_date')
     df_g_p = group_articles(column_name='p_date')
 
-    cnx.close()
     return df_g_t, df_g_p
 
 
@@ -212,10 +240,41 @@ def start_group_by_date():
             continue
         df_g_t, df_g_p = group_articleimg_bydate(df_cur, biz, nickname)
 
-        merge_group_and_fin(df_g_t).to_csv('result_datas/group_table/trade_date/' + nickname + '_tdate.csv')
-        merge_group_and_fin(df_g_p).to_csv('result_datas/group_table/publish_date/' + nickname + '_pdate.csv')
+        merge_group_and_fin(df_g_t).to_csv(gv.TGROUP_CSV_PATH + nickname + '_tdate.csv')
+        merge_group_and_fin(df_g_p).to_csv(gv.PGROUP_CSV_PATH + nickname + '_pdate.csv')
 
         insert_groupbydate(df_g_t, 'gzhs_imgs_bytdate')
         insert_groupbydate(df_g_p, 'gzhs_imgs_bydate')
         # print(df_g_t, df_g_p)
         # time.sleep(1111)
+
+
+# 把金融表合并到group表
+def merge_fin_df(df_g: pd.DataFrame) -> pd.DataFrame:
+    from my_tools import mysql_dao
+    return pd.merge(df_g, mysql_dao.select_table(gv.FIN_TABLE, gv.FIN_SELECT), how='left', on=['date_ts'])
+
+
+def start_group():
+    from my_tools import mysql_dao
+
+    def insert_group_table(tup, x):
+        if not tup[0].empty and not tup[1].empty:
+            mysql_dao.insert_table(gv.TGROUP_TABLE, tup[0])
+            mysql_dao.insert_table(gv.PGROUP_TABLE, tup[1])
+
+            merge_fin_df(tup[0]).to_csv(gv.TGROUP_CSV_PATH + x['nickname'] + '_tdate.csv')
+            merge_fin_df(tup[1]).to_csv(gv.PGROUP_CSV_PATH + x['nickname'] + '_pdate.csv')
+
+    select_gzh_table()[['biz', 'nickname']].apply(
+        lambda x:
+        insert_group_table(
+            group_articleimg_bydate(
+                select_img_table(x['biz']), x['biz'], x['nickname']
+            ), x
+        )
+        ,
+        axis=1)
+
+
+start_group()
