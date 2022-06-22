@@ -12,6 +12,10 @@ from datetime import datetime, date
 
 from wc_img_info import global_vars as gv
 
+from global_log.log import Logger
+
+logger = Logger(gv.LOG_FILE, __name__).getlog()
+
 
 # 用于计算程序运行时间
 def timethis(func):
@@ -42,7 +46,6 @@ def date_to_ts(date_type):
 
 # 按照url下载图片 需要提前建立好公众号的子目录 所有封面放在cover_imgs下面
 def down_from_url(biz_name, artical_name, img_url):
-    import logging
     try:
         r = requests.get(img_url, stream=True)
         if r.status_code == 200:
@@ -58,7 +61,7 @@ def down_from_url(biz_name, artical_name, img_url):
             return None
 
     except BaseException as e:
-        logging.getLogger(__name__).error(e)
+        logger.error(e)
         return None
 
 

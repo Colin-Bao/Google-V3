@@ -4,6 +4,9 @@
 # @Time      :2022/6/21 16:35
 # @Author    :Colin
 # @Note      :None
+from global_log import global_vars
+
+LOG_FILE = global_vars.LOG_PATH + 'PRE_IMG' + '.log'
 
 BATCH_SIZE = 512
 MODEL_PATH = '/Users/mac/PycharmProjects/Google-V3/img_sentiment/twitter_tl_500.h5'

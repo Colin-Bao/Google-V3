@@ -14,8 +14,11 @@ import pandas as pd
 from keras.applications.inception_v3 import preprocess_input
 from keras.models import load_model
 from keras.preprocessing import image
+from img_sentiment import global_vars as gv
 
-import logging
+from global_log.log import Logger
+
+logger = Logger(gv.LOG_FILE, __name__).getlog()
 
 
 def conn_to_db():
@@ -27,7 +30,6 @@ def conn_to_db():
 # 用于在数据库中的路径进行情绪预测
 # root_path参数已经移除
 def filepath_to_img(df_img):
-    import logging
     img_path_list = []
     for i in range(len(df_img)):
         try:
@@ -38,10 +40,10 @@ def filepath_to_img(df_img):
             x = preprocess_input(x)
             img_path_list.append(x)
             # print(x)
-            logging.getLogger(__name__).info('loading no.%s image' % i)
+            logger.info('loading no.%s image' % i)
 
         except (FileNotFoundError, PIL.UnidentifiedImageError) as e:
-            logging.getLogger(__name__).error(e)
+            logger.error(e)
             continue
 
     # 把图片数组联合在一起
