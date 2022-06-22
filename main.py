@@ -50,6 +50,11 @@ def run_group_date():
 # 7.合并聚合后的group与金融市场数据
 
 
+def run_check_date():
+    from data_clean import check_null
+    # check_null.start_check()
+
+
 if __name__ == '__main__':
     del_logs()
     # logging.basicConfig(filename='sqldao.log', encoding='utf-8', level=logging.INFO, filemode='w')
@@ -78,5 +83,7 @@ if __name__ == '__main__':
 
     # 6.(已测试)每家公众号按照日期聚合article,并计算聚合后的指标,再与金融市场数据连接
     run_group_date()
+
+    run_check_date()
 
     # 8.在Stata中重新排列时间序列,计算滞后变量回归
