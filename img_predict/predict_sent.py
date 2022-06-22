@@ -14,11 +14,11 @@ import pandas as pd
 from keras.applications.inception_v3 import preprocess_input
 from keras.models import load_model
 from keras.preprocessing import image
-from img_predict import global_vars as gv
+from img_predict import __config as gv
 
 from log_rec.log import Logger
 
-logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
+logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()
 
 
 def conn_to_db():

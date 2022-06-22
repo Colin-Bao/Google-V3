@@ -11,14 +11,15 @@ import logging
 
 
 # 既把日志输出到控制台， 还要写入日志文件
-class Logger():
-    def __init__(self, logname="info", loglevel=logging.INFO, loggername=None):
-        '''
+class Logger:
+    def __init__(self, logname="info", chlevel=logging.WARN, loggername=None):
+        """
            指定保存日志的文件路径，日志级别，以及调用文件
            将日志存入到指定的文件中
-        '''
+        """
+        # print(loggername)
         # 创建一个logger
-        self.logger = logging.getLogger(loggername)
+        self.logger = logging.getLogger(None)
         self.logger.setLevel(logging.INFO)
         # 创建一个handler，用于写入日志文件
         fh = logging.FileHandler(logname, mode='a')
@@ -32,7 +33,8 @@ class Logger():
             ch.setLevel(logging.WARN)
             # 定义handler的输出格式
             # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            formatter = logging.Formatter('[%(levelname)s]%(asctime)s %(filename)s:%(lineno)d: %(message)s')
+            # %(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s
+            formatter = logging.Formatter('[%(levelname)s]%(asctime)s [%(filename)s:%(lineno)d]: %(message)s')
             fh.setFormatter(formatter)
             fh.setLevel(logging.INFO)
             ch.setFormatter(formatter)

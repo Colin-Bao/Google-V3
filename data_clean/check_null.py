@@ -6,7 +6,7 @@
 # @Note      :None
 
 import pandas as pd
-from data_clean import global_vars as gv
+from data_clean import __config as gv
 
 
 # 检查空列

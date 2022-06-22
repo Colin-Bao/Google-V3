@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :global_vars.py
+# @FileName  :__config.py
 # @Time      :2022/6/21 20:25
 # @Author    :Colin
 # @Note      :None

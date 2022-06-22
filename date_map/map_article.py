@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :map_article_tdate.py
+# @FileName  :map_article.py
 # @Time      :2022/6/16 17:51
 # @Author    :Colin
 # @Note      :None
 from datetime import datetime
 from tools import mysql_dao
-from date_map import global_vars as gv
+from date_map import __config as gv
 import mysql.connector
 import pandas as pd
 

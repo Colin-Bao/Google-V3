@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :create_maptable.py
+# @FileName  :create_map.py
 # @Time      :2022/6/16 23:24
 # @Author    :Colin
 # @Note      :None
 import pandas as pd
-from date_map import global_vars as gv
+from date_map import __config as gv
 
 
 # 参考的交易日期

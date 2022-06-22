@@ -7,10 +7,10 @@
 
 
 import pandas as pd
-from tools import global_vars as gv
+from tools import __config as gv
 from log_rec.log import Logger
 
-logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
+logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()
 
 
 def df_to_tup(df):

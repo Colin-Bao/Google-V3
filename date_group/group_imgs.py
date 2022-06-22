@@ -12,7 +12,7 @@ import mysql.connector
 import pandas as pd
 from pandas import DataFrame
 
-from date_group import global_vars as gv
+from date_group import __config as gv
 
 # date类型转ts
 from tools import mysql_dao

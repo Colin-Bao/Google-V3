@@ -9,7 +9,7 @@ import mysql.connector
 import pandas as pd
 from data_down import tushare_api
 
-from data_down import global_vars as gv
+from data_down import __config as gv
 from log_rec.log import Logger
 
 logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()

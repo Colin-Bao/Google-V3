@@ -10,11 +10,11 @@ import mysql.connector
 import os
 from datetime import datetime, date
 
-from img_down import global_vars as gv
+from img_down import __config as gv
 
 from log_rec.log import Logger
 
-logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
+logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()
 
 
 # 用于计算程序运行时间
