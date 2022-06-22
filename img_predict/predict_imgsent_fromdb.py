@@ -14,9 +14,9 @@ import pandas as pd
 from keras.applications.inception_v3 import preprocess_input
 from keras.models import load_model
 from keras.preprocessing import image
-from img_sentiment import global_vars as gv
+from img_predict import global_vars as gv
 
-from global_log.log import Logger
+from log_rec.log import Logger
 
 logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
 
@@ -33,7 +33,7 @@ def filepath_to_img(df_img):
     img_path_list = []
     for i in range(len(df_img)):
         try:
-            images = image.load_img('/Users/mac/PycharmProjects/Google-V3/wcimg_info/' + df_img[i],
+            images = image.load_img('/Users/mac/PycharmProjects/Google-V3/img_down/' + df_img[i],
                                     target_size=(299, 299))
             x = image.img_to_array(images)
             x = np.expand_dims(x, axis=0)
@@ -68,7 +68,7 @@ def predict_from_path(df_query) -> pd.DataFrame:
     x = filepath_to_img(df_query['local_cover'])
 
     # 预测
-    y = predict_img_bymodel(x, '/Users/mac/PycharmProjects/Google-V3/img_sentiment/twitter_tl_500.h5')
+    y = predict_img_bymodel(x, '/img_predict/twitter_tl_500.h5')
 
     # 预测结果与原表拼在一起
     #  id path neg pos
@@ -81,7 +81,7 @@ def predict_from_path(df_query) -> pd.DataFrame:
 
 
 def select_pic_path(batch_size=512) -> pd.DataFrame:
-    from my_tools import mysql_dao
+    from tools import mysql_dao
     df_limit = mysql_dao.select_table('article_imgs', ['id', 'local_cover'],
                                       {'local_cover': 'NOT NULL', 'cover_neg': 'NULL', 'LIMIT': batch_size})
     return df_limit
@@ -135,7 +135,7 @@ def old_update_img_table(df_con):
 
 
 def update_img_table(df: pd.DataFrame):
-    from my_tools import mysql_dao
+    from tools import mysql_dao
     mysql_dao.update_table('article_imgs', df)
 
 

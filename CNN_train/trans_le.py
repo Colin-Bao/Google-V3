@@ -1,7 +1,7 @@
 import time
 from datetime import datetime, date
 from PIL import Image
-from financial_data import tushare_api
+from data_down import tushare_api
 import os
 import mysql.connector
 import pandas as pd

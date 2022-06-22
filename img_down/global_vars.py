@@ -5,9 +5,9 @@
 # @Author    :Colin
 # @Note      :None
 
-LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/global_log/log_file/'
+LOG_PATH = '/log_rec/log_file/'
 
-LOCAL_ROOT_PATH = '/wcimg_info/'
+LOCAL_ROOT_PATH = '/img_down/'
 LOCAL_COVER_PATH = 'cover_imgs/'
 
 START_TS = '1621000000'

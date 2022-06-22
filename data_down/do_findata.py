@@ -7,9 +7,9 @@
 
 
 def start():
-    from financial_data import load_data
+    from data_down import load_data
     load_data.start_download()
 
-    from financial_data import cal_data
+    from data_down import cal_data
     cal_data.start_cal()
     # ;

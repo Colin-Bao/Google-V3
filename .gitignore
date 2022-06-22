@@ -1,7 +1,7 @@
 /result_datas/group_table/
 /twitter2/
 /twitter_dataset/
-/wcimg_info/cover_imgs/
-/img_sentiment/twitter_tl_500.h5
+/img_down/cover_imgs/
+/img_predict/twitter_tl_500.h5
 /.idea/
-/global_log/log_file/
+/log_rec/log_file/

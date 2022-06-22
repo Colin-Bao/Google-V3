@@ -1,4 +1,4 @@
-from global_log.mylog import ml
+from log_rec.mylog import ml
 
 ml.info('ss')
 

@@ -7,10 +7,10 @@
 from datetime import datetime
 import mysql.connector
 import pandas as pd
-from financial_data import tushare_api
+from data_down import tushare_api
 
-from financial_data import global_vars as gv
-from global_log.log import Logger
+from data_down import global_vars as gv
+from log_rec.log import Logger
 
 logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()
 
@@ -95,7 +95,7 @@ def start_download():
     index_list = gv.INDEX_LIST
     attr_dict = gv.INDEX_TABLE_COLUMN
 
-    from my_tools import mysql_dao
+    from tools import mysql_dao
 
     for code in index_list:
         df = get_from_tu(code)

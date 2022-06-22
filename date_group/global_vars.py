@@ -4,7 +4,7 @@
 # @Time      :2022/6/21 20:25
 # @Author    :Colin
 # @Note      :None
-LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/global_log/log_file/'
+LOG_PATH = '/log_rec/log_file/'
 
 FIN_TABLE = '399300.SZ'
 FIN_SELECT = ['date_ts', 'ts_code', 'trade_date', 'vol', 'log_return', 'log_return', 'weekday']

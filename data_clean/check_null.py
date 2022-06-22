@@ -6,12 +6,12 @@
 # @Note      :None
 
 import pandas as pd
-from clean_data import global_vars as gv
+from data_clean import global_vars as gv
 
 
 # 检查空列
 def check_null_column(table_name: str) -> pd.DataFrame:
-    from my_tools import mysql_dao as md
+    from tools import mysql_dao as md
     # li = [mysql_dao.select_table(table_name, ['COUNT(' + i + ''], {i: 'NULL'}) for i in
     #       mysql_dao.select_columns(table_name)]
     # return li['COUNT i']

@@ -7,8 +7,8 @@
 
 
 import pandas as pd
-from my_tools import global_vars as gv
-from global_log.log import Logger
+from tools import global_vars as gv
+from log_rec.log import Logger
 
 logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
 
@@ -382,7 +382,7 @@ def test_demo():
     :return:用于测试
     :note:
     """
-    from financial_data import tushare_api
+    from data_down import tushare_api
     tu = tushare_api.TuShareGet('20120101', '20220601')
     # 获取的指数
     df_kline = pd.DataFrame(tu.get_index('000001.SH'))

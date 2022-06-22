@@ -9,7 +9,7 @@ from datetime import datetime
 
 
 def get_from_tu():
-    from financial_data import tushare_api
+    from data_down import tushare_api
     import tushare as ts
     pro = ts.pro_api('99dec24a97c268cac40c0761443d2ceaa2ae4089949c65d61630b3fe')
 
@@ -36,10 +36,10 @@ def get_from_tu():
 
 def down_data():
     code = ''
-    from financial_data import load_data
+    from data_down import load_data
     df = load_fin_data.get_from_tu(code)
     print(df)
-    # from my_tools import mysql_dao
+    # from tools import mysql_dao
     # mysql_dao.insert_table(code, df,
     #                        {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'trade_date': 'INT'})
 

@@ -4,7 +4,7 @@
 # @Time      :2022/6/21 16:54
 # @Author    :Colin
 # @Note      :None
-LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/global_log/log_file/'
+LOG_PATH = '/log_rec/log_file/'
 # TRADE
 TRADE_TABLE = '399300.SZ'
 TRADE_TABLE_SELECT = ['date_ts', 'trade_date']

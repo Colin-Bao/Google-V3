@@ -10,9 +10,9 @@ import mysql.connector
 import os
 from datetime import datetime, date
 
-from wcimg_info import global_vars as gv
+from img_down import global_vars as gv
 
-from global_log.log import Logger
+from log_rec.log import Logger
 
 logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
 
@@ -67,7 +67,7 @@ def down_from_url(biz_name, artical_name, img_url):
 
 # 按照公众号顺序下载图片
 def get_gzh_list() -> pd.DataFrame:
-    from my_tools import mysql_dao
+    from tools import mysql_dao
     return mysql_dao.select_table('gzhs', ['biz'])
 
 
@@ -155,7 +155,7 @@ def do_save_cover_imgs(gzh_list=None):
 
 
 def save_insert_img(biz_name, start_ts, end_ts):
-    from my_tools import mysql_dao
+    from tools import mysql_dao
     # 合并查询img表中没有本地路径的图片
     # 不用对应好id,直接把img中没有的id从article从下载
     # 左表是articles 右表是img
