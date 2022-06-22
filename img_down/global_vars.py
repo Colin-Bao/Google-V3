@@ -5,7 +5,7 @@
 # @Author    :Colin
 # @Note      :None
 
-LOG_PATH = '/log_rec/log_file/'
+LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/log_rec/log_file/'
 
 LOCAL_ROOT_PATH = '/img_down/'
 LOCAL_COVER_PATH = 'cover_imgs/'

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :create_info_table.py
+# @FileName  :create_maptable.py
 # @Time      :2022/6/16 23:24
 # @Author    :Colin
 # @Note      :None

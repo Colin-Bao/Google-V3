@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :vis_pre_res.py
+# @FileName  :vis_img.py
 # @Time      :2022/6/16 20:19
 # @Author    :Colin
 # @Note      :None

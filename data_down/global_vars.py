@@ -6,7 +6,7 @@
 # @Note      :None
 
 
-LOG_PATH = '/log_rec/log_file/'
+LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/log_rec/log_file/'
 
 INDEX_LIST = ['399300.SZ', '000001.SH']
 INDEX_TABLE_COLUMN = {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'trade_date': 'INT'}

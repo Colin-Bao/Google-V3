@@ -5,7 +5,7 @@
 # @Author    :Colin
 # @Note      :None
 
-LOG_PATH = '/log_rec/log_file/'
+LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/log_rec/log_file/'
 
 BATCH_SIZE = 512
 MODEL_PATH = '/img_predict/twitter_tl_500.h5'

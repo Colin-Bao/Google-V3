@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :predict_imgsent_fromdb.py
+# @FileName  :predict_sent.py
 # @Time      :2022/6/16 16:40
 # @Author    :Colin
 # @Note      :None

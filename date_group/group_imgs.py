@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :group_gzh_imgs.py
+# @FileName  :group_imgs.py
 # @Time      :2022/6/16 19:50
 # @Author    :Colin
 # @Note      :None

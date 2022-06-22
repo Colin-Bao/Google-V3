@@ -1,5 +1,5 @@
 def del_logs():
-    PATH = '/log_rec/log_file'
+    PATH = '/Users/mac/PycharmProjects/Google-V3/log_rec/log_file'
     import shutil
     import os
     try:
@@ -21,15 +21,15 @@ def run_wc_img_info():
 # 暂时只有封面图像情绪
 def run_img_sentiment():
     # logging.logger.info('4.计算article_img中的图像情绪')
-    from img_predict import predict_imgsent_fromdb
-    predict_imgsent_fromdb.start_predict()
+    from img_predict import predict_sent
+    predict_sent.start_predict()
 
 
 # 5.把article的日期映射到交易日期
 def run_map_date():
     # logging.logger.info('5.把article的日期映射到交易日期')
-    from date_map import do_map_date
-    do_map_date.start()
+    from date_map import do_map
+    do_map.start()
 
 
 # 5.5下载和计算金融市场数据
@@ -43,8 +43,8 @@ def run_fin_data():
 # 6.每家公众号按照日期聚合article,并计算聚合后的指标
 def run_group_date():
     # logging.logger.info('6.每家公众号按照日期聚合article,并计算聚合后的指标')
-    from date_group import group_gzh_imgs
-    group_gzh_imgs.start_group()
+    from date_group import group_imgs
+    group_imgs.start_group()
 
 
 # 7.合并聚合后的group与金融市场数据
