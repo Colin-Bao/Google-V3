@@ -36,7 +36,7 @@ def get_from_tu():
 
 def down_data():
     code = ''
-    from financial_data import load_fin_data
+    from financial_data import load_data
     df = load_fin_data.get_from_tu(code)
     print(df)
     # from my_tools import mysql_dao

@@ -10,11 +10,11 @@ import mysql.connector
 import os
 from datetime import datetime, date
 
-from wc_img_info import global_vars as gv
+from wcimg_info import global_vars as gv
 
 from global_log.log import Logger
 
-logger = Logger(gv.LOG_FILE, __name__).getlog()
+logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
 
 
 # 用于计算程序运行时间

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# @FileName  :load_fin_data.py
+# @FileName  :load_data.py
 # @Time      :2022/6/16 20:10
 # @Author    :Colin
 # @Note      :None
@@ -12,7 +12,7 @@ from financial_data import tushare_api
 from financial_data import global_vars as gv
 from global_log.log import Logger
 
-logger = Logger(logname=gv.LOG_FILE, loggername=__name__).getlog()
+logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()
 
 
 # 获取数据库连接

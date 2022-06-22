@@ -222,7 +222,7 @@ def insert_groupbydate(df_group, table_name):
 
 # 合并表格并保存csv
 def merge_group_and_fin(df_g: pd.DataFrame):
-    from financial_data import cal_fin_data
+    from financial_data import cal_data
     df_fin = cal_fin_data.select_fin_table()
     df_con = pd.merge(df_g, df_fin, how='left', on=['date_ts'])
     # print(df_g['date_ts'], df_fin['date_ts'])

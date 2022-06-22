@@ -18,7 +18,7 @@ from img_sentiment import global_vars as gv
 
 from global_log.log import Logger
 
-logger = Logger(gv.LOG_FILE, __name__).getlog()
+logger = Logger(gv.LOG_PATH + __name__ + '.log', __name__).getlog()
 
 
 def conn_to_db():
@@ -33,7 +33,7 @@ def filepath_to_img(df_img):
     img_path_list = []
     for i in range(len(df_img)):
         try:
-            images = image.load_img('/Users/mac/PycharmProjects/Google-V3/wc_img_info/' + df_img[i],
+            images = image.load_img('/Users/mac/PycharmProjects/Google-V3/wcimg_info/' + df_img[i],
                                     target_size=(299, 299))
             x = image.img_to_array(images)
             x = np.expand_dims(x, axis=0)

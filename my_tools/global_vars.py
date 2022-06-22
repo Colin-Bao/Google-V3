@@ -5,9 +5,8 @@
 # @Author    :Colin
 # @Note      :None
 
-from global_log import global_vars
 
-LOG_FILE = global_vars.LOG_PATH + 'SQL_Execute' + '.log'
+LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/global_log/log_file/'
 
 DEBUG_MODE = False
 

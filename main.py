@@ -1,10 +1,10 @@
 def del_logs():
-    from global_log import global_vars
+    PATH = '/Users/mac/PycharmProjects/Google-V3/global_log/log_file'
     import shutil
     import os
     try:
-        shutil.rmtree(global_vars.LOG_PATH)
-        os.mkdir(global_vars.LOG_PATH)
+        shutil.rmtree(PATH)
+        os.mkdir(PATH)
     except Exception as e:
         print(e)
 
@@ -13,8 +13,8 @@ def del_logs():
 def run_wc_img_info():
     # logger.info('把article的本地封面图片下载到新表article_img')
     # logging.logger.info('3.(已测试)把article的本地封面图片下载到新表article_img()')
-    from wc_img_info import save_cover_imgs
-    save_cover_imgs.start_download()
+    from wcimg_info import save_imgs
+    save_imgs.start_download()
 
 
 # 4.计算article_img中的图像情绪
@@ -36,8 +36,8 @@ def run_map_date():
 def run_fin_data():
     # logging.logger.info('5.5下载和计算金融市场数据')
     # 建表
-    from financial_data import do_fin_data
-    do_fin_data.start()
+    from financial_data import do_findata
+    do_findata.start()
 
 
 # 6.每家公众号按照日期聚合article,并计算聚合后的指标
