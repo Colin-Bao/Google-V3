@@ -6,4 +6,8 @@
 # @Note      :None
 
 
-DEBUG_MODE = True
+DEBUG_MODE = False
+
+LOG_FILRNAME = 'SQL_DAO.log'
+
+DEBUG_STR = "[------------执行SQL ----> 记录条数:{1}------------]\n{0}\n"

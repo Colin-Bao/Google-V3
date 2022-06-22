@@ -6,10 +6,7 @@
 # @Note      :None
 
 
-# 转换df为元组
-#
 import pandas as pd
-
 from my_tools import global_vars as gv
 
 
@@ -42,7 +39,10 @@ def query_to_df(cursor_query) -> pd.DataFrame:
 
 # 通用的执行语句
 def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
+    from global_log import do_log
     import logging
+    logger_sql = logging.getLogger(__name__)
+    # logging.basicConfig(filename=gv.LOG_FILRNAME, encoding='utf-8', level=logging.DEBUG)
     import mysql.connector
     cnx = mysql.connector.connect(user='root', password='',
                                   host='127.0.0.1',
@@ -65,11 +65,13 @@ def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
                 return query_to_df(cur)
 
     except mysql.connector.Error as e:
-        logging.error(e)
+        logger_sql.error(e)
     finally:
-        if gv.DEBUG_MODE:
-            print("[------------执行SQL ----> 记录条数:{1}------------]\n{0}\n".format(str(cur.statement), str(cur.rowcount)))
+        debug_str = gv.DEBUG_STR.format(str(cur.statement), str(cur.rowcount))
+        logger_sql.info(debug_str)
 
+        if gv.DEBUG_MODE:
+            print(debug_str)
         cur.close()
         cnx.close()
 
@@ -89,12 +91,38 @@ def select_columns(table_name: str) -> list:
     return excute()
 
 
+# 弃用
+def select_table_count(table_name: str, select_column: list):
+    def select_all_row():
+        sql = 'SELECT COUNT(*) FROM {0}'.format(table_name)
+        return excute_sql(sql)
+
+    def transform_list():
+        pass
+
+    def excute():
+        count = select_all_row()
+        print(count)
+
+    excute()
+
+
 # 按照表格名查找数据
 #
-def select_table(table_name: str, select_column: list, filter_dict: dict = None) -> pd.DataFrame:
+def select_table(table_name: str, select_column: list, filter_dict: dict = None,
+                 select_count: bool = False) -> pd.DataFrame:
     def transform_list():
+        # 查询全部
         if select_column == ['*']:
             colum_str = '*'
+
+        # 查询行数
+        elif select_count:
+            colum_str = ['COUNT(`' + i + '`)' for i in select_column]
+            colum_str += ['COUNT(*)']
+            colum_str = ','.join(colum_str)
+
+        # 字段查询
         else:
             # colum_strs
             colum_str = ['`' + i + '`' for i in select_column]
