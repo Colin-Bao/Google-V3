@@ -8,6 +8,9 @@
 
 import pandas as pd
 from my_tools import global_vars as gv
+from global_log.log import Logger
+
+logger = Logger(gv.LOG_FILE, __name__).getlog()
 
 
 def df_to_tup(df):
@@ -39,11 +42,8 @@ def query_to_df(cursor_query) -> pd.DataFrame:
 
 # 通用的执行语句
 def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
-    from global_log import do_log
-    import logging
-    logger_sql = logging.getLogger(__name__)
-    # logging.basicConfig(filename=gv.LOG_FILRNAME, encoding='utf-8', level=logging.DEBUG)
     import mysql.connector
+
     cnx = mysql.connector.connect(user='root', password='',
                                   host='127.0.0.1',
                                   database='wechat_offacc')
@@ -65,13 +65,21 @@ def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
                 return query_to_df(cur)
 
     except mysql.connector.Error as e:
-        logger_sql.error(e)
+        pass
+
+        # logging.logger.error(e)
     finally:
         debug_str = gv.DEBUG_STR.format(str(cur.statement), str(cur.rowcount))
-        logger_sql.info(debug_str)
+        # logging.info(debug_str)
+        # logging.set_stream_level(debug_str)
+        # print(logging.logger.level)
+        # print(logging.lo)
+        # logger = Logger('log_file/SQL_Execute' + ".log", __name__).getlog()
+        logger.info(debug_str)
 
         if gv.DEBUG_MODE:
-            print(debug_str)
+            pass
+            # print(debug_str)
         cur.close()
         cnx.close()
 
@@ -316,8 +324,8 @@ def insert_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = Non
         excute_sql(sql, 'many', tups)
 
     if df_values.empty:
-        import logging
-        logging.warning('INSERT {0} EMPTY DATAFRAME'.format(table_name))
+        # logging.logger.warning('INSERT {0} EMPTY DATAFRAME'.format(table_name))
+        logger.warn('INSERT {0} EMPTY DATAFRAME'.format(table_name))
         return
 
     if check_flag:
@@ -361,8 +369,8 @@ def update_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = Non
         excute_sql(sql, 'many', tups)
 
     if df_values.empty:
-        import logging
-        logging.warning('UPDATE {0} EMPTY DATAFRAME'.format(table_name))
+        # logging.logger.warning('UPDATE {0} EMPTY DATAFRAME'.format(table_name))
+        logger.warn('UPDATE {0} EMPTY DATAFRAME'.format(table_name))
         return
     check_repair(table_name, df_values.columns.tolist(), type_dict)
     execute()

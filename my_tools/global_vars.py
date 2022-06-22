@@ -5,9 +5,10 @@
 # @Author    :Colin
 # @Note      :None
 
+from global_log import global_vars
+
+LOG_FILE = global_vars.LOG_PATH + 'SQL_Execute' + '.log'
 
 DEBUG_MODE = False
-
-LOG_FILRNAME = 'SQL_DAO.log'
 
 DEBUG_STR = "[------------执行SQL ----> 记录条数:{1}------------]\n{0}\n"

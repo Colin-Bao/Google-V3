@@ -15,8 +15,7 @@ from keras.applications.inception_v3 import preprocess_input
 from keras.models import load_model
 from keras.preprocessing import image
 
-# 获取数据库连接
-import my_tools.mysql_dao
+import logging
 
 
 def conn_to_db():
@@ -28,6 +27,7 @@ def conn_to_db():
 # 用于在数据库中的路径进行情绪预测
 # root_path参数已经移除
 def filepath_to_img(df_img):
+    import logging
     img_path_list = []
     for i in range(len(df_img)):
         try:
@@ -38,10 +38,10 @@ def filepath_to_img(df_img):
             x = preprocess_input(x)
             img_path_list.append(x)
             # print(x)
-            print('loading no.%s image' % i)
+            logging.getLogger(__name__).info('loading no.%s image' % i)
 
         except (FileNotFoundError, PIL.UnidentifiedImageError) as e:
-            print(e, df_img[i])
+            logging.getLogger(__name__).error(e)
             continue
 
     # 把图片数组联合在一起
@@ -171,5 +171,3 @@ def start_predict(batch_size=512):
         # 包括了封面党的位置,颜色,类型标签等数据库,用localurl作为主键和外键
         # 更新情绪数据
         # update_img_table(df_sentiment)
-
-

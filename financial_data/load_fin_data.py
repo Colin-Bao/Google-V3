@@ -10,6 +10,9 @@ import pandas as pd
 from financial_data import tushare_api
 
 from financial_data import global_vars as gv
+from global_log.log import Logger
+
+logger = Logger(logname=gv.LOG_FILE, loggername=__name__).getlog()
 
 
 # 获取数据库连接
@@ -26,8 +29,7 @@ def get_from_tu(ts_code) -> pd.DataFrame:
     try:
         df_kline = pd.DataFrame(tu.get_index(ts_code))
     except Exception as e:
-        import logging
-        logging.error(e)
+        logger.error(e)
         return pd.DataFrame()
 
     # 转换为dt方便计算

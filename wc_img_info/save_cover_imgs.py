@@ -42,6 +42,7 @@ def date_to_ts(date_type):
 
 # 按照url下载图片 需要提前建立好公众号的子目录 所有封面放在cover_imgs下面
 def down_from_url(biz_name, artical_name, img_url):
+    import logging
     try:
         r = requests.get(img_url, stream=True)
         if r.status_code == 200:
@@ -57,7 +58,7 @@ def down_from_url(biz_name, artical_name, img_url):
             return None
 
     except BaseException as e:
-        print(e)
+        logging.getLogger(__name__).error(e)
         return None
 
 
