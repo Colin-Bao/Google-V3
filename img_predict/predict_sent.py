@@ -75,11 +75,21 @@ def predict_from_path(df_query) -> pd.DataFrame:
     return df_c
 
 
+# 分片查询待预测图片
 def select_pic_path(batch_size=512) -> pd.DataFrame:
     from tools import mysql_dao
     df_limit = mysql_dao.select_table('article_imgs', ['id', 'local_cover'],
                                       {'local_cover': 'NOT NULL', 'cover_neg': 'NULL', 'LIMIT': batch_size})
     return df_limit
+
+
+# 查询全部待预测图片
+def select_count_pic() -> int:
+    from tools import mysql_dao
+    df_limit = mysql_dao.select_table('article_imgs', ['id'],
+                                      {'local_cover': 'NOT NULL', 'cover_neg': 'NULL', },
+                                      select_count=True)
+    return int(df_limit['COUNT(`id`)'][0])
 
 
 # 查询数据库中存在的文件路径 且不为空的地方
