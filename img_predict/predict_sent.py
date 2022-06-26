@@ -20,12 +20,6 @@ from log_rec.log import Logger
 logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()
 
 
-def conn_to_db():
-    return mysql.connector.connect(user='root', password='',
-                                   host='127.0.0.1',
-                                   database='wechat_offacc')
-
-
 # 用于在数据库中的路径进行情绪预测
 # root_path参数已经移除
 def filepath_to_img(df_img):
@@ -90,51 +84,8 @@ def select_pic_path(batch_size=512) -> pd.DataFrame:
 
 # 查询数据库中存在的文件路径 且不为空的地方
 # 移除了日期筛选,保留了512分片
-def old_select_pic_path(batch_size):
-    cnx = conn_to_db()
-    cursor_query = cnx.cursor(buffered=True)
-    query = ("SELECT id,local_cover FROM article_imgs "
-             "WHERE local_cover IS NOT NULL AND "
-             "cover_neg IS NULL "
-             )
-    query = query + 'LIMIT ' + str(batch_size)
-    # 执行cursor_query 按照路径不为空的表提取情绪
-    # date类型转ts
-    cursor_query.execute(query)
-
-    # 对返回的cursor_query中的记录进行处理
-    # 按照id处理并转换为dfx
-
-    # 转换为df重命名并返回
-    dict_columns = {i: cursor_query.column_names[i] for i in range(len(cursor_query.column_names))}
-    df_cur = pd.DataFrame(cursor_query)
-    df_cur.rename(columns=dict_columns, inplace=True)
-
-    cnx.close()
-
-    return cursor_query.rowcount, df_cur
-
 
 # 更新情绪到article_img
-def old_update_img_table(df_con):
-    cnx = conn_to_db()
-    # 只要neg pos id
-    df_con = df_con[[0, 1, 'id']]
-
-    # 转成元组方便mysql插入
-    merge_result_tuples = [tuple(xi) for xi in df_con.values]
-
-    # 更新语句 按照id更新
-    update_old_sent = (
-        "UPDATE article_imgs SET cover_neg = %s , cover_pos = %s "
-        "WHERE id = %s ")
-
-    cur_sent = cnx.cursor(buffered=True)
-    cur_sent.executemany(update_old_sent, merge_result_tuples)
-    cnx.commit()
-    cnx.close()
-
-
 def update_img_table(df: pd.DataFrame):
     from tools import mysql_dao
     mysql_dao.update_table('article_imgs', df)

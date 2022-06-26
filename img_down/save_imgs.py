@@ -8,6 +8,7 @@ import pandas as pd
 import requests
 import mysql.connector
 import os
+import threading
 from datetime import datetime, date
 
 from img_down import __config as gv
@@ -49,13 +50,22 @@ def down_from_url(biz_name, artical_name, img_url):
     try:
         r = requests.get(img_url, stream=True)
         if r.status_code == 200:
+
             # 相对路径
             local_path_save = gv.LOCAL_COVER_PATH + str(biz_name) + '/' + str(
                 artical_name) + '.jpg'
+
+            # 判断该文件是否在本地存在
+            if os.path.exists(local_path_save):
+                logger.warn('图像{0}已在本地存在'.format(img_url))
+                return None
+
             # 绝对路径
             local_path_read = gv.LOCAL_ROOT_PATH + local_path_save
 
             open(local_path_read, 'wb').write(r.content)  # 将内容写入图片
+
+            # 在数据库存入相对路径
             return local_path_save
         else:
             return None
@@ -169,6 +179,7 @@ def save_insert_img(biz_name, start_ts, end_ts):
 
     # 执行cursor_query 按照公众号名称biz查询
     df = mysql_dao.excute_sql(left_join_query, 'one', (biz_name, start_ts, end_ts))
+
     if not df.empty:
         def my_function(x: pd.Series):
             # 先保存

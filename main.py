@@ -26,7 +26,7 @@ def run_wc_img_info():
 def run_img_sentiment():
     # logging.logger.info('4.计算article_img中的图像情绪')
     from img_predict import predict_sent
-    predict_sent.start_predict()
+    predict_sent.start_predict(512)
 
 
 # 5.把article的日期映射到交易日期
