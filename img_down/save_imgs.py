@@ -60,7 +60,7 @@ def down_from_url(biz_name, artical_name, img_url):
         else:
             return None
 
-    except BaseException as e:
+    except Exception as e:
         logger.error(e)
         return None
 
@@ -159,12 +159,13 @@ def save_insert_img(biz_name, start_ts, end_ts):
     # 合并查询img表中没有本地路径的图片
     # 不用对应好id,直接把img中没有的id从article从下载
     # 左表是articles 右表是img
-    left_join_query = ("SELECT articles.biz,articles.id,articles.cover,articles.mov FROM articles "
-                       "LEFT JOIN article_imgs "
-                       "ON articles.id = article_imgs.id "
-                       "WHERE article_imgs.id IS NULL AND "
-                       "articles.biz = %s AND "
-                       "articles.p_date BETWEEN %s AND %s ")
+    left_join_query = (
+        "SELECT articles.biz,articles.id,articles.cover,articles.mov,article_imgs.local_cover FROM articles "
+        "LEFT JOIN article_imgs "
+        "ON articles.id = article_imgs.id "
+        "WHERE article_imgs.local_cover IS NULL AND "
+        "articles.biz = %s AND "
+        "articles.p_date BETWEEN %s AND %s ")
 
     # 执行cursor_query 按照公众号名称biz查询
     df = mysql_dao.excute_sql(left_join_query, 'one', (biz_name, start_ts, end_ts))

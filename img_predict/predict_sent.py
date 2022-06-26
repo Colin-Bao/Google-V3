@@ -4,7 +4,6 @@
 # @Time      :2022/6/16 16:40
 # @Author    :Colin
 # @Note      :None
-
 import os
 
 import PIL
@@ -33,17 +32,16 @@ def filepath_to_img(df_img):
     img_path_list = []
     for i in range(len(df_img)):
         try:
-            images = image.load_img('/Users/mac/PycharmProjects/Google-V3/img_down/' + df_img[i],
+            images = image.load_img(gv.IMG_PATH + df_img[i],
                                     target_size=(299, 299))
             x = image.img_to_array(images)
             x = np.expand_dims(x, axis=0)
             x = preprocess_input(x)
             img_path_list.append(x)
-            # print(x)
             logger.info('loading no.%s image' % i)
 
-        except (FileNotFoundError, PIL.UnidentifiedImageError) as e:
-            logger.error(e)
+        except (FileNotFoundError, OSError, PIL.UnidentifiedImageError) as e:
+            logger.error(str(e) + df_img[i])
             continue
 
     # 把图片数组联合在一起
@@ -54,9 +52,12 @@ def filepath_to_img(df_img):
 # 根据x计算预测值 和id,path,预测值,拼在一起 返回df
 def predict_img_bymodel(x, model_path):
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-    model = load_model(model_path)
-    y_pred = pd.DataFrame(model.predict(x))
-    return y_pred
+    try:
+        model = load_model(model_path)
+        y_pred = pd.DataFrame(model.predict(x))
+        return y_pred
+    except OSError as e:
+        logger.error(e)
 
 
 # 根据返回的图像路径进行情绪计算
@@ -68,7 +69,7 @@ def predict_from_path(df_query) -> pd.DataFrame:
     x = filepath_to_img(df_query['local_cover'])
 
     # 预测
-    y = predict_img_bymodel(x, '/img_predict/twitter_tl_500.h5')
+    y = predict_img_bymodel(x, gv.MODEL_PATH)
 
     # 预测结果与原表拼在一起
     #  id path neg pos

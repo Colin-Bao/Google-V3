@@ -9,4 +9,6 @@
 LOG_PATH = '/Users/mac/PycharmProjects/Google-V3/log_rec/log_file/'
 
 INDEX_LIST = ['399300.SZ', '000001.SH']
-INDEX_TABLE_COLUMN = {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'trade_date': 'INT'}
+INDEX_TABLE_COLUMN = {'PK': 'trade_date', 'ts_code': 'VARCHAR(40)', 'date_ts': 'INT', 'date': 'DATE',
+                      'trade_date': 'INT',
+                      'close': 'float', 'vol': 'int', 'pre_close': 'float', 'amount': 'float', }

@@ -65,9 +65,7 @@ def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
                 return query_to_df(cur)
 
     except mysql.connector.Error as e:
-        pass
-
-        # logging.logger.error(e)
+        logger.error(e)
     finally:
         debug_str = gv.DEBUG_STR.format(str(cur.statement), str(cur.rowcount))
         # logging.info(debug_str)
@@ -233,6 +231,7 @@ def alter_table(table_name: str, column_list: list, type_dict: dict = None):
 
 
 # 检查完整性和修复
+# 默认为VARCHAR(255)
 def check_repair(check_table: str, check_column: list, type_dict: dict = None):
     def repair_attr():
         # 如果没有该collumn则创建一个
@@ -244,7 +243,7 @@ def check_repair(check_table: str, check_column: list, type_dict: dict = None):
 
         if check_table not in table_list:
             print(check_table, table_list)
-            column_dict = {i: 'FLOAT' for i in check_column}
+            column_dict = {i: 'VARCHAR(255)' for i in check_column}
             if type_dict is not None:
                 column_dict.update(type_dict)
             create_table(check_table, column_dict)
@@ -364,7 +363,6 @@ def update_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = Non
         sql = ("UPDATE " + '`' + table_name + '` ' +
                "SET " + update_str + " " +
                "WHERE " + where_str)
-        # print(sql)
         # 执行
         excute_sql(sql, 'many', tups)
 
