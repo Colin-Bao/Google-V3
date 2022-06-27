@@ -7,7 +7,6 @@
 import os
 
 import PIL
-import mysql.connector
 import numpy as np
 import pandas as pd
 from keras.applications.inception_v3 import preprocess_input
@@ -58,6 +57,8 @@ def predict_img_bymodel(x, model_path):
 # 传入df_att_img
 # 返回df_att_img+y
 def predict_from_path(df_query) -> pd.DataFrame:
+    if df_query.empty:
+        return pd.DataFrame()
     # 图片路径读取成可以预测的格式
     # 第2列是img路径
     x = filepath_to_img(df_query['local_cover'])
@@ -119,17 +120,27 @@ def predict_by_batch(batch_size=512):
 
 
 def start_predict(batch_size=512):
-    i = batch_size
-    while i >= 0:
+    from log_rec import bar
+    # 获取总进度
+    count_pic = select_count_pic()
+    bar = bar.Bar('Predict IMG', count_pic).get_bar()
+    # 开始循环
+    while count_pic > 0:
         # 获得图像情绪
         df_query = select_pic_path(batch_size)
 
-        i = df_query.shape[0]
-        if i == 0:
-            break
         # 根据路径计算情绪
         df_sentiment = predict_from_path(df_query)
         update_img_table(df_sentiment)
+
+        # 更新进度条
+        bar.update(batch_size)
+
+        count_pic = df_query.shape[0]
+        # 待预测图片为0后跳出
+        if count_pic == 0:
+            bar.update(bar.total - bar.n)
+            break
 
         # 还需要详细的情绪数据,细化的
         # 包括了封面党的位置,颜色,类型标签等数据库,用localurl作为主键和外键

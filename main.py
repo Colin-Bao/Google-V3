@@ -59,6 +59,11 @@ def run_check_date():
     check_null.start_check([''])
 
 
+# 可视化的类
+def vis_data():
+    import data_vis
+
+
 if __name__ == '__main__':
     del_logs()
     logger = Logger(logname=PATH + 'main_log' + '.log').getlog()
@@ -86,6 +91,8 @@ if __name__ == '__main__':
 
     # 6.(已测试)每家公众号按照日期聚合article,并计算聚合后的指标,再与金融市场数据连接
     run_group_date()
+
+    # run_check_date()
 
     # run_check_date()
 

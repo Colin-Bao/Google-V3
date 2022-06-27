@@ -324,6 +324,7 @@ def insert_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = Non
 
     if df_values.empty:
         # logging.logger.warning('INSERT {0} EMPTY DATAFRAME'.format(table_name))
+        print('\n')
         logger.warn('INSERT {0} EMPTY DATAFRAME'.format(table_name))
         return
 
@@ -367,7 +368,6 @@ def update_table(table_name: str, df_values: pd.DataFrame, type_dict: dict = Non
         excute_sql(sql, 'many', tups)
 
     if df_values.empty:
-        # logging.logger.warning('UPDATE {0} EMPTY DATAFRAME'.format(table_name))
         logger.warn('UPDATE {0} EMPTY DATAFRAME'.format(table_name))
         return
     check_repair(table_name, df_values.columns.tolist(), type_dict)

@@ -265,7 +265,12 @@ def start_group():
             merge_fin_df(tup[0]).to_csv(gv.TGROUP_CSV_PATH + x['nickname'] + '_tdate.csv')
             merge_fin_df(tup[1]).to_csv(gv.PGROUP_CSV_PATH + x['nickname'] + '_pdate.csv')
 
-    select_gzh_table()[['biz', 'nickname']].apply(
+    # 公众号apply进度条
+    from tqdm.auto import tqdm
+    tqdm.pandas(desc='Start Group Gzhs')
+
+    # 进度条
+    select_gzh_table()[['biz', 'nickname']].progress_apply(
         lambda x:
         insert_group_table(
             group_articleimg_bydate(

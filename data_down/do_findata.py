@@ -7,9 +7,14 @@
 
 
 def start():
+    from date_map import create_map, map_article
+    from log_rec import bar
+    bar = bar.Bar('Down Findata', 2).get_bar()
+
     from data_down import load_data
     load_data.start_download()
+    bar.update(1)
 
     from data_down import cal_data
     cal_data.start_cal()
-    # ;
+    bar.update(1)
