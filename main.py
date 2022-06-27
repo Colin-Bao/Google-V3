@@ -61,7 +61,8 @@ def run_check_date():
 
 # 可视化的类
 def vis_data():
-    import data_vis
+    from data_vis import vis_img
+    vis_img.load_img_fromdb('')
 
 
 if __name__ == '__main__':

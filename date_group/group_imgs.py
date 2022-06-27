@@ -279,3 +279,7 @@ def start_group():
         )
         ,
         axis=1)
+
+    #     弄完以后要连接出滞后
+    import cal_other
+    cal_other.cal_lag_neg()
