@@ -9,14 +9,11 @@ import __config as gv
 
 
 # 按照公众号名称从数据库读取数据
-def load_img_fromdb() -> pd.DataFrame:
+def load_imgpath_fromdb(gzh_name: str) -> list:
     from tools import mysql_dao
-    return mysql_dao.select_table('按照公众号查看所有图片', ['*'])
-    # return mysql_dao.excute_sql(gv.SELECT_SQL.format(nick_name))
+    df = mysql_dao.select_table(gzh_name + '封面图片信息', ['*'], {'LIMIT': '512'}).loc[:50, gv.VIS_COLUMN]
 
-
-def load_imgpath_fromdb() -> list:
-    df = load_img_fromdb().loc[:50, gv.VIS_COLUMN]
+    # 组成字典
     listdict = [{'local_cover': value[0], 'cover_neg': value[1], 'p_date': value[2], 'log_return_l1': value[3]} for
                 index, value in
                 enumerate(df.values)]
