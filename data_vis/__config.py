@@ -18,3 +18,6 @@ SELECT_SQL = "select `gzhs`.`nickname` AS `nickname`,`articles`.`p_date` AS `p_d
 
 SELECT_COLUMN = ['nickname', 'p_date', 't_date', 'id', 'mov', 'local_cover', 'cover_neg',
                  'cover_pos', 'log_return', 'amount']
+
+# 可视化
+VIS_COLUMN = ['local_cover', 'cover_neg', 'datetime_p', 'log_return_l1']

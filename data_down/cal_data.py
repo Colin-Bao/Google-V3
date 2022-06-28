@@ -23,13 +23,17 @@ def cal_return(df: pd.DataFrame) -> pd.DataFrame:
     df['log_return_2'] = df[['log_return', ]].apply(
         lambda x: np.square(x['log_return']),
         axis=1)
+
+    # 计算滞后回报
+    df['log_return_l1'] = df['log_return'].shift(-1)
+
     # 删除空行
     df.dropna(inplace=True)
 
     # 全部转为str方便插入
     df = df.astype(str)
 
-    return df[['log_return', 'log_return_2', 'date_ts']]
+    return df[['log_return', 'log_return_2', 'log_return_l1', 'date_ts']]
 
 
 # 计算日期并更新
@@ -43,10 +47,10 @@ def cal_date(df: pd.DataFrame) -> pd.DataFrame:
 # 本py的控制类
 def start_cal():
     from tools import mysql_dao
-    df = cal_return(mysql_dao.select_table('000001.SH', ['*']))
-    mysql_dao.update_table('000001.SH', df, {'log_return': 'FLOAT', 'log_return_2': 'FLOAT'})
-    df = cal_return(mysql_dao.select_table('399300.SZ', ['*']))
-    mysql_dao.update_table('399300.SZ', df, {'log_return': 'FLOAT', 'log_return_2': 'FLOAT'})
+    mysql_dao.update_table('000001.SH', cal_return(mysql_dao.select_table('000001.SH', ['*'])),
+                           {'log_return': 'FLOAT', 'log_return_2': 'FLOAT', 'log_return_l1': 'FLOAT'})
+    mysql_dao.update_table('399300.SZ', cal_return(mysql_dao.select_table('399300.SZ', ['*'])),
+                           {'log_return': 'FLOAT', 'log_return_2': 'FLOAT', 'log_return_l1': 'FLOAT'})
     # 等价于
     # "UPDATE `399300.SZ` SET log_return = %s,log_return_2 = %s "
     # "WHERE date_ts = %s ")
