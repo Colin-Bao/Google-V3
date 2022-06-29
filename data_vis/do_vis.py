@@ -15,7 +15,7 @@ def link_to_qt():
     # df_img_list = select_data.load_imgpath_fromdb('中国证券报')
 
     app = QApplication(sys.argv)
-    qt_obj = show_img.MyIMG('图像消极情绪V1.0  作者:Colin 指导老师:胡毅', 10, 5, 120)
+    qt_obj = show_img.MYTab()
 
     # qt_obj.set_gridimg_update(df_img_list)
 

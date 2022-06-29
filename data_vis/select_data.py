@@ -6,16 +6,30 @@
 # @Note      :None
 import pandas as pd
 import __config as gv
+from tools import mysql_dao
 
 
-# 按照公众号名称从数据库读取数据
-def load_imgpath_fromdb(gzh_name: str) -> list:
-    from tools import mysql_dao
-    df = mysql_dao.select_table(gzh_name + '封面图片信息', ['*'], {'LIMIT': '512'}).loc[:50, gv.VIS_COLUMN]
+def load_all_media() -> list:
+    return mysql_dao.select_table('gzhs', ['nickname'])['nickname'].tolist()
 
-    # 组成字典
-    listdict = [{'local_cover': value[0], 'cover_neg': value[1], 'datetime_p': value[2], 'log_return_l1': value[3]} for
-                index, value in
-                enumerate(df.values)]
+
+# 需要返回字典列表
+# 按照聚合方式读取数据
+def load_img_fromdb(gzh_name: str = None, group_by: str = '', date: str = None) -> list:
+    if gzh_name:
+
+        df = mysql_dao.select_table('所有媒体封面图片信息',
+                                    gv.VIS_COLUMN,
+                                    {'nickname': "\'{0}\'".format(gzh_name), 'LIMIT': '128'}
+                                    )
+
+    else:
+        df = mysql_dao.select_table('所有媒体封面图片信息',
+                                    gv.VIS_COLUMN,
+                                    {'LIMIT': '128'}
+                                    ).loc[:50, gv.VIS_COLUMN]
+
+    # 把df组成字典
+    listdict = [{j: value[i] for i, j in enumerate(gv.VIS_COLUMN)} for index, value in enumerate(df.values)]
 
     return listdict

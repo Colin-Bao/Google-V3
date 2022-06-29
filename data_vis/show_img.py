@@ -13,11 +13,50 @@ Website: zetcode.com
 
 import sys
 from PyQt6.QtWidgets import (QWidget, QGridLayout, QHBoxLayout, QVBoxLayout,
-                             QPushButton, QApplication, QLabel, QFrame, QLCDNumber, QSlider, QComboBox)
+                             QPushButton, QApplication, QLabel, QFrame, QLCDNumber, QSlider, QComboBox, QTabWidget)
 from PyQt6.QtGui import QPixmap, QFont, QPalette
 from PyQt6.QtCore import Qt
 from data_vis import __config as gv
 from data_vis import select_data
+
+
+class MYTab(QTabWidget):
+    def __init__(self):
+        super().__init__()
+
+        # 增加选项卡
+        self.tab1 = QWidget()
+        self.tab2 = QWidget()
+        self.addTab(self.tab1, '按照日期聚合')
+        self.addTab(self.tab2, '不聚合')
+
+        # 初始化选项卡
+        self.tab1UI()
+        self.tab2UI()
+
+        # 整个窗体
+        self.initUI()
+
+    def initUI(self):
+        # 展示
+        self.setWindowTitle('图像消极情绪V1.0  作者:Colin 指导老师:胡毅')
+        self.show()
+
+    #    分别布局
+    def tab1UI(self):
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.tab1.setLayout(layout)
+        layout.addWidget(MyIMG('图像消极情绪V1.0  作者:Colin 指导老师:胡毅', 10, 5, 120))
+
+    #    分别布局
+    def tab2UI(self):
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.tab2.setLayout(layout)
+        layout.addWidget(MyIMG('图像消极情绪V1.0  作者:Colin 指导老师:胡毅', 10, 5, 120))
 
 
 class MyIMG(QWidget):
@@ -52,7 +91,6 @@ class MyIMG(QWidget):
         self.init_frame_option()
         self.init_frame_img()
 
-        # 排列frame容器小组件
         self.mainlay.addWidget(self.frame_option)
         self.mainlay.addWidget(self.frame_img)
 
@@ -62,11 +100,6 @@ class MyIMG(QWidget):
 
         # 绑定按钮
         # self.init_button_event()
-
-        # 展示
-        self.move(0, 0)
-        self.setWindowTitle(self.title)
-        self.show()
 
     def init_frame_option(self):
         # 为layout安装frame
@@ -81,7 +114,6 @@ class MyIMG(QWidget):
 
         # 在layout1中增加组件
         def create_widget_la1():
-            from tools import mysql_dao
             # 先在option_layout中增加frame
 
             # 设置面板的数量
@@ -92,13 +124,13 @@ class MyIMG(QWidget):
                 frame_layout = QHBoxLayout(frame)
                 self.option_layout.addWidget(frame)
 
-                #    再到frame中增加组件
+                # 第1个面板
                 if frame_addnum == 0:
                     lab = QLabel('选择媒体')
                     frame_layout.addWidget(lab)
 
                     # 绑定按钮事件
-                    for table in [str(i).split('封面图片信息', 2)[0] for i in mysql_dao.show_tables() if '封面图片信息' in i]:
+                    for table in select_data.load_all_media():
                         button = QPushButton(table)
                         button.setObjectName(table)
                         frame_layout.addWidget(button)
@@ -141,6 +173,7 @@ class MyIMG(QWidget):
 
         self.img_layout = QGridLayout(self.frame_img)
         self.img_layout.setSpacing(0)
+        self.img_layout.setContentsMargins(0, 0, 0, 0)
 
         # 把位置和组件匹配,并在img_layout中增加组件
         def add_img_layout():
@@ -198,9 +231,9 @@ class MyIMG(QWidget):
             self.option_para.update({'聚合': text})
 
         # 如果参数改变tets
-
         if not old_option_para == self.option_para:
-            self.set_gridimg_update(select_data.load_imgpath_fromdb(self.option_para['媒体']))
+            # print(select_data.load_img_fromdb(self.option_para['媒体']))
+            self.set_gridimg_update(select_data.load_img_fromdb(self.option_para['媒体']))
 
     # 获取按钮并绑定事件
 
