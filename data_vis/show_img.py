@@ -21,6 +21,23 @@ from data_vis import __config as gv
 from data_vis import select_data
 
 
+# 重写Qlabel
+class MyQLabel(QLabel):
+    # 自定义信号, 注意信号必须为类属性
+    import PyQt6
+    button_clicked_signal = PyQt6.QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(MyQLabel, self).__init__(parent)
+
+    def mouseReleaseEvent(self, QMouseEvent):
+        self.button_clicked_signal.emit()
+
+    # 可在外部与槽函数连接
+    def connect_customized_slot(self, func):
+        self.button_clicked_signal.connect(func)
+
+
 # 主选项卡
 class MYTab(QTabWidget):
     def __init__(self):
@@ -73,8 +90,11 @@ class MyIMG(QWidget):
         self.img_h = img_h
         self.img_sc = img_sc
 
+        # 用于保存这个控件中的数据
+        self.data_list = []
+
         # 控件的参数
-        self.option_para = {'媒体': '全部', '排序': ''}
+        self.option_para = {'媒体': '全部', '排序': '', '页面': 0}
 
         # 基本布局
         self.frame_option = QFrame()
@@ -163,10 +183,14 @@ class MyIMG(QWidget):
                 elif frame_addnum == 2:
                     frame_layout = QHBoxLayout(frame)
                     self.option_layout.addWidget(frame)
-                    lab = QLabel('筛选日期')
-
-                    for i in [lab, ]:
-                        frame_layout.addWidget(i)
+                    lab = QLabel('页面')
+                    frame_layout.addWidget(lab)
+                    # 批量增加
+                    for i in range(10):
+                        btn = QRadioButton(str(i + 1))
+                        btn.setObjectName(str(i))
+                        btn.clicked.connect(self.handle_camsave)
+                        frame_layout.addWidget(btn)
 
             #
 
@@ -186,6 +210,8 @@ class MyIMG(QWidget):
         self.img_layout = QGridLayout(self.frame_img)
         self.img_layout.setSpacing(0)
         self.img_layout.setContentsMargins(0, 0, 0, 0)
+
+        #
 
         # 把位置和组件匹配,并在img_layout中增加组件
         def add_img_layout():
@@ -207,15 +233,30 @@ class MyIMG(QWidget):
 
                 # 每个frame的layout增加组件
                 for add_num in gv.VIS_COLUMN:
+                    # 共同使用的对象
                     lbl = QLabel(add_num)
+
+                    if add_num == 'content_url':
+                        # 不增加这个组件
+                        continue
+
+                    elif add_num == 'local_cover':
+                        pixmap = QPixmap().scaledToWidth(self.img_sc)
+                        lbl.setPixmap(pixmap)
+                        lbl.setFixedSize(self.img_sc, self.img_sc)
+
+                    elif add_num == 'datetime_p':
+                        lbl = QPushButton(add_num)
+
+                        # lbl.setFixedWidth(self.img_sc)
+                        lbl.clicked.connect(self.handle_camsave)
+
+                    # 统一改变属性
                     lbl.setObjectName(add_num)
                     font = lbl.font()
                     font.setPointSize(10)
                     lbl.setFont(font)
-                    if add_num == 'local_cover':
-                        pixmap = QPixmap().scaledToWidth(self.img_sc)
-                        lbl.setPixmap(pixmap)
-                        lbl.setFixedSize(self.img_sc, self.img_sc)
+
                     # 增加
                     frame_layout.addWidget(lbl)
 
@@ -236,16 +277,37 @@ class MyIMG(QWidget):
         old_option_para = self.option_para.copy()
         # 第一个设置面板
         if isinstance(sender, QRadioButton):
-            self.option_para.update({'媒体': sender.objectName()})
+            # QRadioButton按钮名称
+
+            if sender.objectName() in [str(i) for i in range(10)]:
+                self.option_para.update({'页面': int(sender.objectName())})
+
+            # QRadioButton按钮
+            else:
+                self.option_para.update({'媒体': sender.objectName()})
 
         # 第二个设置面板
         elif isinstance(sender, QComboBox):
             self.option_para.update({'排序': text})
 
+        # 图像面板中的按钮
+        elif isinstance(sender, QPushButton):
+            href = str(sender.styleSheet()).split('href=', 2)[1]
+
+            import webbrowser
+            webbrowser.open(href)
+
         # 如果参数改变tets
         if not old_option_para == self.option_para:
+            # print(self.option_para)
             # print(select_data.load_img_fromdb(self.option_para['媒体']))
-            self.set_gridimg_update(select_data.load_img_fromdb(self.option_para['媒体']))
+            self.data_list = select_data.load_img_fromdb(self.option_para['媒体'])
+            # 获得筛选后的图像列表
+            page_imgnum = self.img_h * self.img_w
+            page = self.option_para['页面']
+            page_list = self.data_list[int(page * page_imgnum): ((page + 1) * page_imgnum)]
+            # 更新
+            self.set_gridimg_update(page_list)
 
     # 获取按钮并绑定事件
 
@@ -265,7 +327,7 @@ class MyIMG(QWidget):
         for imgframe, imgdict in zip(widget_index, img_dictlist):
 
             # 读取Qlabel部分
-            for child in imgframe.findChildren((QLabel,)):
+            for child in imgframe.findChildren((QLabel, QPushButton)):
 
                 # 改变QLabel
                 if isinstance(child, QLabel):
@@ -276,6 +338,7 @@ class MyIMG(QWidget):
                     if child.objectName() == "local_cover":
                         pixmap = QPixmap(gv.IMG_PATH + imgdict['local_cover']).scaledToWidth(self.img_sc)
                         child.setPixmap(pixmap)
+                        # print(imgdict['content_url'])
                     elif child.objectName() == "log_return_l1":
                         log_re = imgdict['log_return_l1']
                         if log_re < 0:
@@ -283,6 +346,12 @@ class MyIMG(QWidget):
                         else:
                             child.setStyleSheet("QLabel { color : green; }")
                         child.setText("{:.2f}%".format(log_re * 100))
+
+                elif isinstance(child, QPushButton):
+                    # 改变所有的Label显示文字
+                    child.setText(str(imgdict[child.objectName()]))
+                    child.setStyleSheet('href={}'.format(imgdict['content_url']))
+                    # child.setAttribute()
 
 
 # 聚合面板

@@ -20,14 +20,14 @@ def load_img_fromdb(gzh_name: str = None, date: str = None) -> list:
 
         df = mysql_dao.select_table('所有媒体封面图片信息',
                                     gv.VIS_COLUMN,
-                                    {'nickname': "\'{0}\'".format(gzh_name), 'LIMIT': '128'}
+                                    {'nickname': "\'{0}\'".format(gzh_name), 'LIMIT': '1000'}
                                     )
 
     else:
         df = mysql_dao.select_table('所有媒体封面图片信息',
                                     gv.VIS_COLUMN,
                                     {'LIMIT': '128'}
-                                    ).loc[:50, gv.VIS_COLUMN]
+                                    )
 
     # 把df组成字典
     listdict = [{j: value[i] for i, j in enumerate(df.columns)} for index, value in enumerate(df.values)]
@@ -56,3 +56,4 @@ def load_img_fromdb_bygroup(gzh_name: str, date: str = None):
 
 # s = load_img_fromdb_bygroup('央视财经')
 # print(s)
+# print(load_img_fromdb())

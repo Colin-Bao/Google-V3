@@ -13,5 +13,4 @@ def load_img_fromdb(nick_name: str) -> pd.DataFrame:
     from tools import mysql_dao
     return mysql_dao.excute_sql(gv.SELECT_SQL.format(nick_name))
 
-
-print(load_img_fromdb('中国证券报').columns)
+# print(load_img_fromdb('中国证券报').columns)

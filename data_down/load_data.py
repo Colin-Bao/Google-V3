@@ -6,6 +6,7 @@
 # @Note      :None
 from datetime import datetime
 import pandas as pd
+import numpy as np
 from data_down import tushare_api
 
 from data_down import __config as gv
@@ -38,6 +39,7 @@ def get_from_tu(ts_code) -> pd.DataFrame:
     df_kline['weekday'] = df_kline[['trade_date', ]].apply(
         lambda x: datetime.strptime(x['trade_date'], '%Y%m%d').weekday(),
         axis=1)
+
     # 排序以填充
     df = df_kline.sort_values(by='date_ts')
 
@@ -55,7 +57,9 @@ def start_download():
 
     for code in index_list:
         df = get_from_tu(code)
+        # print(df)
         mysql_dao.insert_table(code, df, attr_dict)
         # mysql_dao.update_table(code, df, attr_dict)
 
 # start_download()
+#
