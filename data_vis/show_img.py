@@ -188,17 +188,18 @@ class MyIMG(QWidget):
     def handle_camsave(self, text):
         sender = self.sender()
         # 保存设置
-
+        old_option_para = self.option_para.copy()
         # 第一个设置面板
         if isinstance(sender, QPushButton):
-            self.set_gridimg_update(select_data.load_imgpath_fromdb(sender.objectName()))
             self.option_para.update({'媒体': sender.objectName()})
 
         # 第二个设置面板
         elif isinstance(sender, QComboBox):
             self.option_para.update({'聚合': text})
 
-        print(self.option_para)
+        # 如果参数改变
+        if not old_option_para == self.option_para:
+            self.set_gridimg_update(select_data.load_imgpath_fromdb(self.option_para['媒体']))
 
     # 获取按钮并绑定事件
     def init_button_event(self):
