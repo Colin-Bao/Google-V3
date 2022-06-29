@@ -14,8 +14,8 @@ def load_all_media() -> list:
 
 
 # 需要返回字典列表
-# 按照聚合方式读取数据
-def load_img_fromdb(gzh_name: str = None, group_by: str = '', date: str = None) -> list:
+
+def load_img_fromdb(gzh_name: str = None, date: str = None) -> list:
     if gzh_name:
 
         df = mysql_dao.select_table('所有媒体封面图片信息',
@@ -30,6 +30,24 @@ def load_img_fromdb(gzh_name: str = None, group_by: str = '', date: str = None) 
                                     ).loc[:50, gv.VIS_COLUMN]
 
     # 把df组成字典
-    listdict = [{j: value[i] for i, j in enumerate(gv.VIS_COLUMN)} for index, value in enumerate(df.values)]
+    listdict = [{j: value[i] for i, j in enumerate(df.columns)} for index, value in enumerate(df.values)]
 
     return listdict
+
+
+# 按照聚合方式读取数据
+def load_img_fromdb_bygroup(gzh_name: str, date: str = None):
+    df = mysql_dao.select_table('所有媒体封面图片信息_外连',
+                                ['*'],
+                                {'nick_name': "\'{0}\'".format(gzh_name), 'LIMIT': '512'}
+                                )
+    df_g = df.groupby('t_date')
+
+    # 解析里面的组获得想要的信息
+    for group in enumerate(df_g):
+        print(group)
+    return df_g
+    # return [{j: value[i] for i, j in enumerate(df.columns)} for index, value in enumerate(df.values)]
+
+
+load_img_fromdb_bygroup('中国证券报')

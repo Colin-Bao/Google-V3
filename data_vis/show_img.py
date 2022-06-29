@@ -13,13 +13,15 @@ Website: zetcode.com
 
 import sys
 from PyQt6.QtWidgets import (QWidget, QGridLayout, QHBoxLayout, QVBoxLayout,
-                             QPushButton, QApplication, QLabel, QFrame, QLCDNumber, QSlider, QComboBox, QTabWidget)
+                             QPushButton, QApplication, QLabel, QFrame, QLCDNumber, QSlider, QComboBox, QTabWidget,
+                             QRadioButton, QSizePolicy)
 from PyQt6.QtGui import QPixmap, QFont, QPalette
 from PyQt6.QtCore import Qt
 from data_vis import __config as gv
 from data_vis import select_data
 
 
+# 主选项卡
 class MYTab(QTabWidget):
     def __init__(self):
         super().__init__()
@@ -48,7 +50,7 @@ class MYTab(QTabWidget):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         self.tab1.setLayout(layout)
-        layout.addWidget(MyIMG('图像消极情绪V1.0  作者:Colin 指导老师:胡毅', 10, 5, 120))
+        layout.addWidget(MyIMGGROUP())
 
     #    分别布局
     def tab2UI(self):
@@ -56,12 +58,13 @@ class MYTab(QTabWidget):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         self.tab2.setLayout(layout)
-        layout.addWidget(MyIMG('图像消极情绪V1.0  作者:Colin 指导老师:胡毅', 10, 5, 120))
+        layout.addWidget(MyIMG())
 
 
+# 图像显示聚合面板
 class MyIMG(QWidget):
 
-    def __init__(self, title='MYIMG', img_w: int = 8, img_h: int = 5, img_sc: int = 120):
+    def __init__(self, title='MYIMG', img_w: int = 10, img_h: int = 5, img_sc: int = 120):
         super().__init__()
 
         # 形参
@@ -71,7 +74,7 @@ class MyIMG(QWidget):
         self.img_sc = img_sc
 
         # 控件的参数
-        self.option_para = {'媒体': '全部', '聚合': '不聚合'}
+        self.option_para = {'媒体': '全部', '排序': ''}
 
         # 基本布局
         self.frame_option = QFrame()
@@ -104,6 +107,7 @@ class MyIMG(QWidget):
     def init_frame_option(self):
         # 为layout安装frame
         self.frame_option.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_option.setFixedHeight(60)
         # self.myframe.setFrameShadow(QFrame.Plain)
         self.frame_option.setLineWidth(3)
 
@@ -121,28 +125,34 @@ class MyIMG(QWidget):
                 frame = QFrame()
                 frame.setLineWidth(1)
                 frame.setFrameShape(QFrame.Shape.StyledPanel)
-                frame_layout = QHBoxLayout(frame)
-                self.option_layout.addWidget(frame)
 
                 # 第1个面板
                 if frame_addnum == 0:
-                    lab = QLabel('选择媒体')
-                    frame_layout.addWidget(lab)
+                    frame_layout = QGridLayout(frame)
+                    self.option_layout.addWidget(frame)
 
-                    # 绑定按钮事件
+                    # 生成小组件绑定按钮事件
+                    button_list = []
                     for table in select_data.load_all_media():
-                        button = QPushButton(table)
+                        button = QRadioButton(table)
+                        button_list += [button]
                         button.setObjectName(table)
-                        frame_layout.addWidget(button)
+                        # frame_layout.addWidget(button)
                         button.clicked.connect(self.handle_camsave)
+
+                    # 生成位置参数
+                    for position, btn in zip([(i, j) for i in range(2) for j in range(5)], button_list):
+                        frame_layout.addWidget(btn, *position)
 
                 # 第2个面板
                 elif frame_addnum == 1:
+                    frame_layout = QHBoxLayout(frame)
+                    self.option_layout.addWidget(frame)
 
-                    lab = QLabel('设置聚合方式')
+                    lab = QLabel('设置排序方式')
                     combo = QComboBox()
 
-                    for i in ['不聚合', '按照自然日期聚合', '按照交易日期聚合']:
+                    for i in ['按照消极概率排序', '按照自然日期聚合', '按照交易日期聚合']:
                         combo.addItem(i)
                         combo.textActivated[str].connect(self.handle_camsave)
 
@@ -151,6 +161,8 @@ class MyIMG(QWidget):
 
                 # 第3个面板
                 elif frame_addnum == 2:
+                    frame_layout = QHBoxLayout(frame)
+                    self.option_layout.addWidget(frame)
                     lab = QLabel('筛选日期')
 
                     for i in [lab, ]:
@@ -223,12 +235,12 @@ class MyIMG(QWidget):
         # 保存设置
         old_option_para = self.option_para.copy()
         # 第一个设置面板
-        if isinstance(sender, QPushButton):
+        if isinstance(sender, QRadioButton):
             self.option_para.update({'媒体': sender.objectName()})
 
         # 第二个设置面板
         elif isinstance(sender, QComboBox):
-            self.option_para.update({'聚合': text})
+            self.option_para.update({'排序': text})
 
         # 如果参数改变tets
         if not old_option_para == self.option_para:
@@ -273,8 +285,87 @@ class MyIMG(QWidget):
                         child.setText("{:.2f}%".format(log_re * 100))
 
 
-def start_show():
-    app = QApplication(sys.argv)
-    ex = MyIMG('图像消极情绪', 4, 4, 120)
+# 聚合面板
+class MyIMGGROUP(MyIMG):
+    def __init__(self):
+        super().__init__()
 
-    sys.exit(app.exec())
+    # 重写方法
+    def handle_camsave(self, text):
+        pass
+
+    # 重写方法
+    def init_frame_img(self):
+        # 为layout安装frame
+        self.frame_img.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_img.setLineWidth(1)
+        # self.frame_img.setStyleSheet("background-color: rgb(248,207,223);")
+
+        self.img_layout = QGridLayout(self.frame_img)
+        self.img_layout.setSpacing(2)
+        self.img_layout.setContentsMargins(0, 0, 0, 0)
+
+        # 把位置和组件匹配,并在img_layout中增加组件
+        def add_img_layout():
+            # 生成初始图片数量
+            img_num = range(self.img_h * self.img_w)
+
+            # 生成位置参数
+            positions = [(i, j) for i in range(self.img_h) for j in range(self.img_w)]
+
+            # 遍历每一个网格并在网格中增加组件
+            for position, path in zip(positions, img_num):
+                # 为layout安装frame
+                frame = QFrame()
+                frame.setFrameShape(QFrame.Shape.StyledPanel)
+                # frame.setLineWidth(0)
+                # frame.setStyleSheet("border:0.5px solid rgb(0,0,0)")
+
+                # 增加底部描述
+                frame_layout_outer = QVBoxLayout(frame)
+
+                # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+                # 增加框内子框
+                grid_frame = QFrame()
+                frame_layout_outer_inner1 = QGridLayout(grid_frame)
+                frame_layout_outer_inner1.setSpacing(0)
+                frame_layout_outer_inner1.setContentsMargins(0, 0, 0, 0)
+                # # 每个frame的layout增加组件
+                for pos, num in zip([(i, j) for i in range(3) for j in range(3)], range(9)):
+                    # 增加
+                    lbl = QLabel()
+                    lbl.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+                    lbl.setScaledContents(True)
+                    pixmap = QPixmap('test.png')
+                    lbl.setPixmap(pixmap)
+
+                    # 位置
+                    frame_layout_outer_inner1.addWidget(lbl, *pos)
+
+                # 增加框内子框
+                h_frame = QFrame()
+                h_frame.setFixedHeight(20)
+                frame_layout_outer_inner2 = QHBoxLayout(h_frame)
+                frame_layout_outer_inner2.setSpacing(0)
+                frame_layout_outer_inner2.setContentsMargins(0, 0, 0, 0)
+                # 下面的描述框
+                lbl_des = QLabel('日期')
+                lbl_des2 = QLabel('情绪')
+                lbl_des3 = QLabel('收益率')
+                frame_layout_outer_inner2.addWidget(lbl_des)
+                frame_layout_outer_inner2.addWidget(lbl_des2)
+                frame_layout_outer_inner2.addWidget(lbl_des3)
+                # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+                # 内部的框增加组件
+                frame_layout_outer.addWidget(grid_frame)
+                frame_layout_outer.addWidget(h_frame)
+                # # 距离
+                frame_layout_outer.setSpacing(0)
+                frame_layout_outer.setContentsMargins(0, 0, 0, 0)
+
+                # 按照位置属性增加
+                self.img_layout.addWidget(frame, *position)
+
+        add_img_layout()
