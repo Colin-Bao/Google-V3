@@ -14,7 +14,7 @@ def load_imgpath_fromdb(gzh_name: str) -> list:
     df = mysql_dao.select_table(gzh_name + '封面图片信息', ['*'], {'LIMIT': '512'}).loc[:50, gv.VIS_COLUMN]
 
     # 组成字典
-    listdict = [{'local_cover': value[0], 'cover_neg': value[1], 'p_date': value[2], 'log_return_l1': value[3]} for
+    listdict = [{'local_cover': value[0], 'cover_neg': value[1], 'datetime_p': value[2], 'log_return_l1': value[3]} for
                 index, value in
                 enumerate(df.values)]
 
