@@ -198,6 +198,7 @@ class MyIMG(QWidget):
             self.option_para.update({'聚合': text})
 
         # 如果参数改变
+        #
         if not old_option_para == self.option_para:
             self.set_gridimg_update(select_data.load_imgpath_fromdb(self.option_para['媒体']))
 
