@@ -197,11 +197,13 @@ class MyIMG(QWidget):
         elif isinstance(sender, QComboBox):
             self.option_para.update({'聚合': text})
 
-        # 如果参数改变
+        # 如果参数改变tets
+
         if not old_option_para == self.option_para:
             self.set_gridimg_update(select_data.load_imgpath_fromdb(self.option_para['媒体']))
 
     # 获取按钮并绑定事件
+
     def init_button_event(self):
 
         # 遍历option_layout中所有的按钮
