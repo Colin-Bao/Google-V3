@@ -200,8 +200,6 @@ class MyIMG(QWidget):
 
         print(self.option_para)
 
-        add_img_layout()
-
     # 获取按钮并绑定事件
     def init_button_event(self):
 
