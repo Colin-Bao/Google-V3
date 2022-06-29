@@ -198,16 +198,11 @@ class MyIMG(QWidget):
     # 获取按钮并绑定事件
     def init_button_event(self):
 
-        # 接受按钮的信息
-        def handle_camsave():
-            sender = self.sender()
-            self.set_gridimg_update(select_data.load_imgpath_fromdb(sender.objectName()))
-
         # 遍历option_layout中所有的按钮
         for button in [self.option_layout.itemAt(i).widget() for i in range(self.option_layout.count())]:
             if isinstance(button, QPushButton):
                 # 绑定数据库查找按钮
-                button.clicked.connect(handle_camsave)
+                button.clicked.connect(self.handle_camsave)
 
     def set_gridimg_update(self, img_dictlist: list):
         # 获取qframe小组件列表
