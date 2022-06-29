@@ -37,17 +37,22 @@ def load_img_fromdb(gzh_name: str = None, date: str = None) -> list:
 
 # 按照聚合方式读取数据
 def load_img_fromdb_bygroup(gzh_name: str, date: str = None):
-    df = mysql_dao.select_table('所有媒体封面图片信息_外连',
-                                ['*'],
-                                {'nick_name': "\'{0}\'".format(gzh_name), 'LIMIT': '512'}
-                                )
-    df_g = df.groupby('t_date')
-
+    df_all = mysql_dao.select_table('所有媒体封面图片信息_外连',
+                                    ['*'],
+                                    {'nick_name': "\'{0}\'".format(gzh_name), 'LIMIT': '2000'}
+                                    )
     # 解析里面的组获得想要的信息
-    for group in enumerate(df_g):
-        print(group)
-    return df_g
+    out_list = []
+    for date, df in df_all.groupby('t_date'):
+        dict_list = [{j: value[i] for i, j in enumerate(df.columns)} for index, value in enumerate(df.values)]
+        out_list += [
+            {'date': date,
+             'c_neg_ratio': dict_list[0]['c_neg_ratio'],
+             'log_return_l1': dict_list[0]['log_return_l1'],
+             'content': dict_list}]
+    # print(out_list)
+    return out_list
     # return [{j: value[i] for i, j in enumerate(df.columns)} for index, value in enumerate(df.values)]
 
-
-load_img_fromdb_bygroup('中国证券报')
+# s = load_img_fromdb_bygroup('央视财经')
+# print(s)

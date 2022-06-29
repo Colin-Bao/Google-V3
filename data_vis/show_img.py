@@ -41,7 +41,7 @@ class MYTab(QTabWidget):
 
     def initUI(self):
         # 展示
-        self.setWindowTitle('图像消极情绪V1.0  作者:Colin 指导老师:胡毅')
+        self.setWindowTitle('图像消极情绪V1.0 ')
         self.show()
 
     #    分别布局
@@ -141,7 +141,7 @@ class MyIMG(QWidget):
                         button.clicked.connect(self.handle_camsave)
 
                     # 生成位置参数
-                    for position, btn in zip([(i, j) for i in range(2) for j in range(5)], button_list):
+                    for position, btn in zip([(i, j) for i in range(2) for j in range(6)], button_list):
                         frame_layout.addWidget(btn, *position)
 
                 # 第2个面板
@@ -213,7 +213,7 @@ class MyIMG(QWidget):
                     font.setPointSize(10)
                     lbl.setFont(font)
                     if add_num == 'local_cover':
-                        pixmap = QPixmap('test.png').scaledToWidth(self.img_sc)
+                        pixmap = QPixmap().scaledToWidth(self.img_sc)
                         lbl.setPixmap(pixmap)
                         lbl.setFixedSize(self.img_sc, self.img_sc)
                     # 增加
@@ -292,7 +292,61 @@ class MyIMGGROUP(MyIMG):
 
     # 重写方法
     def handle_camsave(self, text):
-        pass
+        sender = self.sender()
+        # 保存设置
+        old_option_para = self.option_para.copy()
+        # 第一个设置面板
+        if isinstance(sender, QRadioButton):
+            self.option_para.update({'媒体': sender.objectName()})
+
+        # 第二个设置面板
+        elif isinstance(sender, QComboBox):
+            self.option_para.update({'排序': text})
+
+        # 如果参数改变tets
+        if not old_option_para == self.option_para:
+            self.set_gridimg_update(self.option_para['媒体'])
+            # print(select_data.load_img_fromdb(self.option_para['媒体']))
+            # self.set_gridimg_update(select_data.load_img_fromdb(self.option_para['媒体']))
+
+    # 更新
+    def set_gridimg_update(self, bizname):
+        df_list = select_data.load_img_fromdb_bygroup(bizname)
+        # 获取qframe小组件列表
+        for index, out_grid in enumerate([self.img_layout.itemAt(i).widget() for i in range(self.img_layout.count())]):
+            # 定位到grid
+            ly_grid = out_grid.findChild(QGridLayout)
+            if isinstance(ly_grid, QGridLayout):
+                for index_i, i in enumerate([ly_grid.itemAt(i).widget() for i in range(ly_grid.count())]):
+                    if isinstance(i, QLabel):
+                        if index < len(df_list):
+                            content = df_list[index]['content']
+                            if index_i < len(content):
+                                pic = QPixmap(gv.IMG_PATH + content[index_i]['local_cover'])
+                                i.setPixmap(pic)
+                            else:
+                                pic = QPixmap()
+                                i.setPixmap(pic)
+                        else:
+                            pic = QPixmap()
+                            i.setPixmap(pic)
+
+            # 定位到下方描述
+            ly_hbox = out_grid.findChild(QHBoxLayout)
+            if isinstance(ly_hbox, QHBoxLayout):
+                for i in [ly_hbox.itemAt(i).widget() for i in range(ly_hbox.count())]:
+                    if isinstance(i, QLabel):
+                        if index < len(df_list):
+                            if i.objectName() == 'date':
+                                i.setText(str(df_list[index]['date']))
+                            elif i.objectName() == 'return':
+
+                                log_re = df_list[index]['log_return_l1']
+                                if log_re < 0:
+                                    i.setStyleSheet("QLabel { color : red; }")
+                                else:
+                                    i.setStyleSheet("QLabel { color : green; }")
+                                i.setText("    {:.2f}%".format(log_re * 100))
 
     # 重写方法
     def init_frame_img(self):
@@ -337,7 +391,7 @@ class MyIMGGROUP(MyIMG):
                     lbl = QLabel()
                     lbl.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
                     lbl.setScaledContents(True)
-                    pixmap = QPixmap('test.png')
+                    pixmap = QPixmap()
                     lbl.setPixmap(pixmap)
 
                     # 位置
@@ -350,12 +404,12 @@ class MyIMGGROUP(MyIMG):
                 frame_layout_outer_inner2.setSpacing(0)
                 frame_layout_outer_inner2.setContentsMargins(0, 0, 0, 0)
                 # 下面的描述框
-                lbl_des = QLabel('日期')
-                lbl_des2 = QLabel('情绪')
-                lbl_des3 = QLabel('收益率')
+                lbl_des = QLabel()
+                lbl_des.setObjectName('date')
+                lbl_des2 = QLabel()
+                lbl_des2.setObjectName('return')
                 frame_layout_outer_inner2.addWidget(lbl_des)
                 frame_layout_outer_inner2.addWidget(lbl_des2)
-                frame_layout_outer_inner2.addWidget(lbl_des3)
                 # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
                 # 内部的框增加组件
