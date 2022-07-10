@@ -169,18 +169,20 @@ def insert_text_table(biz_name, start_ts, end_ts):
         "LEFT JOIN article_texts "
         "ON articles.id = article_texts.id "
         "WHERE article_texts.title_pos IS NULL AND "
+        "articles.title IS NOT NULL AND "
         "articles.biz = %s AND "
         "articles.p_date BETWEEN %s AND %s "
-        "LIMIT 32")
+        "LIMIT {0}").format(gv.BERT_BATCH)
 
     query_count = (
         "SELECT COUNT('*') FROM articles "
         "LEFT JOIN article_texts "
         "ON articles.id = article_texts.id "
         "WHERE article_texts.title_pos IS NULL AND "
+        "articles.title IS NOT NULL AND "
         "articles.biz = %s AND "
         "articles.p_date BETWEEN %s AND %s "
-        "LIMIT 32")
+    )
 
     # 一直循环
     from log_rec import bar
@@ -194,15 +196,20 @@ def insert_text_table(biz_name, start_ts, end_ts):
         # 执行cursor_query 按照公众号名称biz查询
         df = mysql_dao.excute_sql(left_join_query, 'one', (biz_name, start_ts, end_ts))
 
+        # 删除空的,否则向量化会报
+        df = df.dropna()
+
         if not df.empty:
             # tqdm.pandas(desc='DownLoad IMG {0}'.format(biz_name))
             df_pre = pd.DataFrame(predict_from_list(df['title'].tolist()))
             df_pre.rename(columns={0: 'title_pos', 1: 'title_neu', 2: 'title_neg'}, inplace=True)
+
+            # 合并
             df_con = pd.concat([df_pre, df[['mov', 'id']]], axis=1)
 
             # 插入数据库
             mysql_dao.insert_table('article_texts', df_con)
-            progress_bar.update(32)
+            progress_bar.update(gv.BERT_BATCH)
         #
 
         else:
@@ -219,4 +226,5 @@ def start_predict():
         axis=1)
 
 
+# 开始
 start_predict()

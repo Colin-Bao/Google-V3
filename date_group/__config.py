@@ -19,3 +19,6 @@ TGROUP_TABLE = 'gzhs_imgs_bytdate'
 
 PGROUP_CSV_PATH = '/Users/mac/PycharmProjects/Google-V3/result_datas/group_table/publish_date/'
 TGROUP_CSV_PATH = '/Users/mac/PycharmProjects/Google-V3/result_datas/group_table/trade_date/'
+
+TEXT_ATTR_TYPE = {'id': 'INT', 'title_pos': 'FLOAT', 'title_neu': 'mean', 'title_neg': 'mean', 't_pos_tag': 'sum',
+                  't_neu_tag': 'sum', 't_neg_tag': 'sum'}

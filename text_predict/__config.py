@@ -14,3 +14,4 @@ START_TS = '0'
 END_TS = '1654012800'
 
 BERT_PATH = '/Users/mac/PycharmProjects/pythonProject/saved/FinBERT/checkpoint-1000'
+BERT_BATCH = 64
