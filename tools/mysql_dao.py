@@ -55,6 +55,7 @@ def excute_sql(sql, method: str = 'one', tups=None) -> pd.DataFrame:
         if method == 'many':
             cur.executemany(sql, tups)
             cnx.commit()
+        #     查询
         elif method == 'one':
             if tups is not None:
                 cur.execute(sql, tups)

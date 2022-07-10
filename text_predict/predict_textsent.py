@@ -8,6 +8,8 @@ from transformers import BertTokenizer, BertForSequenceClassification, TrainingA
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 import os
 import torch
+from tools import mysql_dao
+from text_predict import __config as gv
 
 
 # 读取数据
@@ -144,26 +146,77 @@ def run_train(bert_path):
     train_model(bert_path)  # 模型地址
 
 
-def predict(bert_path):
+# 执行预测
+def predict_from_list(texts_list):
     # 获取预训练的模型
-    tokenizer = BertTokenizer.from_pretrained(bert_path)
-    model = BertForSequenceClassification.from_pretrained(bert_path, num_labels=3)
+    tokenizer = BertTokenizer.from_pretrained(gv.BERT_PATH)
+    model = BertForSequenceClassification.from_pretrained(gv.BERT_PATH, num_labels=3)
 
-    texts = [
-        '枪击案嫌犯称最初目标并非安倍',
-        '重庆一特斯拉失控 致多人伤亡',
-        '湖南一医院坐椅子收费10元',
-        '海航客机突发故障断电 机舱如蒸桑拿',
-        '外卖小哥考上上海交大研究生',
-    ]
     # 首先还是用分词器进行预处理
-    encoded = tokenizer(texts, truncation=True, padding='max_length', max_length=32, return_tensors='pt')
+    encoded = tokenizer(texts_list, truncation=True, padding='max_length', max_length=32, return_tensors='pt')
     out = model(**encoded)
     probs = out.logits.softmax(dim=-1)
-    print(probs)
+    return probs.detach().numpy()
 
 
-if __name__ == '__main__':
-    #  tensorboard --logdir ./saved/FinBERT/runs
-    # run_train('/Users/mac/PycharmProjects/pythonProject/pytorch_model/FinBERT_L-12_H-768_A-12/')
-    predict('/Users/mac/PycharmProjects/pythonProject/saved/FinBERT/checkpoint-1000')
+# 插入的同时进行预测
+def insert_text_table(biz_name, start_ts, end_ts):
+    # 合并查询img表中没有本地路径的图片
+    # 不用对应好id,直接把img中没有的id从article从下载
+    # 左表是articles 右表是img
+    left_join_query = (
+        "SELECT articles.biz,articles.id,articles.title,articles.mov FROM articles "
+        "LEFT JOIN article_texts "
+        "ON articles.id = article_texts.id "
+        "WHERE article_texts.title_pos IS NULL AND "
+        "articles.biz = %s AND "
+        "articles.p_date BETWEEN %s AND %s "
+        "LIMIT 32")
+
+    query_count = (
+        "SELECT COUNT('*') FROM articles "
+        "LEFT JOIN article_texts "
+        "ON articles.id = article_texts.id "
+        "WHERE article_texts.title_pos IS NULL AND "
+        "articles.biz = %s AND "
+        "articles.p_date BETWEEN %s AND %s "
+        "LIMIT 32")
+
+    # 一直循环
+    from log_rec import bar
+    # 获得总行数
+    df_count = mysql_dao.excute_sql(query_count, 'one', (biz_name, start_ts, end_ts))['COUNT(\'*\')'][0]
+    progress_bar = bar.Bar('Predict {}'.format(biz_name), df_count).get_bar()
+
+    # 一直循环
+    while True:
+
+        # 执行cursor_query 按照公众号名称biz查询
+        df = mysql_dao.excute_sql(left_join_query, 'one', (biz_name, start_ts, end_ts))
+
+        if not df.empty:
+            # tqdm.pandas(desc='DownLoad IMG {0}'.format(biz_name))
+            df_pre = pd.DataFrame(predict_from_list(df['title'].tolist()))
+            df_pre.rename(columns={0: 'title_pos', 1: 'title_neu', 2: 'title_neg'}, inplace=True)
+            df_con = pd.concat([df_pre, df[['mov', 'id']]], axis=1)
+
+            # 插入数据库
+            mysql_dao.insert_table('article_texts', df_con)
+            progress_bar.update(32)
+        #
+
+        else:
+            # progress_bar.finish()
+            break
+
+
+# 开始进行预测
+def start_predict():
+    df = mysql_dao.select_table('gzhs', ['biz'])[['biz']]
+    tqdm.pandas(desc='Predict TitleSent')
+    df.progress_apply(
+        lambda x: insert_text_table(x['biz'], gv.START_TS, gv.END_TS),
+        axis=1)
+
+
+start_predict()
