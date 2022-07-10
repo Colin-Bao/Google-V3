@@ -13,7 +13,8 @@ from keras.applications.inception_v3 import preprocess_input
 from keras.models import load_model
 from keras.preprocessing import image
 from img_predict import __config as gv
-
+import keras
+import tensorflow as tf
 from log_rec.log import Logger
 
 logger = Logger(logname=gv.LOG_PATH + __name__ + '.log', loggername=__name__).getlog()
@@ -25,9 +26,9 @@ def filepath_to_img(df_img):
     img_path_list = []
     for i in range(len(df_img)):
         try:
-            images = image.load_img(gv.IMG_PATH + df_img[i],
-                                    target_size=(299, 299))
-            x = image.img_to_array(images)
+            images = keras.utils.load_img(gv.IMG_PATH + df_img[i],
+                                          target_size=(299, 299))
+            x = keras.utils.img_to_array(images)
             x = np.expand_dims(x, axis=0)
             x = preprocess_input(x)
             img_path_list.append(x)
