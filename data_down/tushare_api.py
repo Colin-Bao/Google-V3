@@ -4,7 +4,7 @@ import tushare as ts
 # 用于给其他文件调用的类
 
 class TuShareGet:
-    __TOKEN = '8f0b25c42eada875e13b9f8463d39b31bf25129133fa32c586c23073'
+    __TOKEN = 'e6f824fb07fc769e95d32580a9fc8b0ab24669c24eac798b0e5056dc'
     ts_code = None
     start_date = None
     end_date = None

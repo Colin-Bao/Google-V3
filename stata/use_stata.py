@@ -18,9 +18,13 @@ def load_all_media() -> list:
 
 def load_reg_data(nickname=None) -> pd.DataFrame:
     if nickname is not None:
-        return mysql_dao.select_table('回归分析', ['*'], {'nick_name': '\'{0}\''.format(nickname)})
+        return mysql_dao.select_table('回归',
+                                      ['*'],
+                                      filter_dict={'nick_name': '\'{0}\''.format(nickname),
+                                                   'date_ts': ['1388505600', '1640880000']},
+                                      )
     else:
-        return mysql_dao.select_table('回归分析', ['*'])
+        return mysql_dao.select_table('回归', ['*'])
 
 
 def load_data() -> list:
@@ -120,7 +124,7 @@ gen return_s_sh=return_sh^2
 gen return_s_shfund=return_shfund^2
 
 //描述性统计
-outreg2 using result/des{0}.doc,replace sum(detail) keep(c_neg_ratio return return_sh return_sz return_shfund ) eqkeep(N sd mean p50 min max ) title(Decriptive statistics)
+outreg2 using result/des{0}.doc,replace sum(detail) keep(t_neg_ratio c_neg_ratio return return_sh return_sz return_shfund ) eqkeep(N sd mean p50 min max ) title(Decriptive statistics)
 
 //执行回归1 CSI
 reg return L(1/5).c_neg_ratio L(1/5).return_s L(1/5).return dweekday*,r
@@ -171,6 +175,51 @@ outreg2 using result/reg.doc,append tstat bdec(3) tdec(2) ctitle(000011.SH)  kee
     return str_do
 
 
+# 交乘回归分析
+def do_file_reg2():
+    #################################################################################################
+    str_do = (
+        """
+//创建时间序列和设定
+gen time=_n
+tsset time
+
+//生成哑变量
+tab(weekday),gen(dweekday)
+drop dweekday1
+
+""")
+
+    #################################################################################################
+    codename_list = ['', '_sz', '_sh', '_shfund']
+    str_do2 = ""
+    for i in codename_list:
+        str_do2 += """
+//更改回报的单位
+ge return{codename}=log_return{codename}*100
+
+//生成log2
+ge return{codename}_s=return{codename}^2
+
+//执行回归
+reg return{codename}  cL.c_neg_ratio#cL.t_neg_ratio  L(1/5).c_neg_ratio L(1/5).t_neg_ratio L(1/5).return{codename}_s L(1/5).return{codename} dweekday*,r
+
+//保存结果
+outreg2 using result/reg.doc,append tstat bdec(3) tdec(2) ctitle({codename}) keep(cL.c_neg_ratio#cL.t_neg_ratio  L(1/5).c_neg_ratio L(1/5).t_neg_ratio )
+
+""".format(codename=i)
+
+    #################################################################################################
+    str_do3 = (
+        """
+//描述性统计
+outreg2 using result/des.doc,replace sum(detail) keep(t_neg_ratio c_neg_ratio return return_sh return_sz return_shfund ) eqkeep(N sd mean p50 min max ) title(Decriptive statistics)
+
+""")
+
+    return str_do + str_do2 + str_do3
+
+
 # 向量自回归分析
 def do_file_var():
     str_do = (
@@ -213,12 +262,14 @@ def start_run_csp():
     df = load_reg_data('中国证券报')
     sfi_s = SFI()
     sfi_s.set_data_df(df)
-    sfi_s.run(do_file_reg().format('中国证券报'))
+    sfi_s.run(do_file_reg2().format('中国证券报'))
 
 
 if __name__ == "__main__":
     import shutil
     import os
+
+    # print(do_file_reg2())
 
     PATH = '/Users/mac/PycharmProjects/Google-V3/stata/result'
     try:

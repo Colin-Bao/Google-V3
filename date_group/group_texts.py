@@ -42,14 +42,15 @@ def group_text_bydate(df, biz, nickname):
             axis=1)
 
         # 添加额外的列pk
-        df_group['id_group_date'] = df_group[[column_name, ]].apply(
-            lambda x: str(biz) + str(x[column_name]), axis=1)
+
         df_group['nick_name'] = nickname
         df_group['biz'] = biz
 
         df_group['date_ts'] = df_group[column_name]
         df_group[column_name] = df_group[[column_name, ]].apply(
             lambda x: str(datetime.fromtimestamp(x[column_name]).date()), axis=1)
+        df_group['id_group_date'] = df_group[[column_name, ]].apply(
+            lambda x: str(biz) + str(x[column_name]), axis=1)
 
         # 改名
         df_group.rename(
@@ -94,5 +95,4 @@ def start_group():
         ,
         axis=1)
 
-
-start_group()
+# start_group()

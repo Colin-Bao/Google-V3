@@ -18,3 +18,6 @@ def start():
     from data_down import cal_data
     cal_data.start_cal()
     bar.update(1)
+
+
+start()
