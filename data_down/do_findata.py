@@ -19,5 +19,4 @@ def start():
     cal_data.start_cal()
     bar.update(1)
 
-
-start()
+# start()
